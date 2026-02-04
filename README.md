@@ -33,7 +33,7 @@ Study-Flow/
 │   ├── audio_module.py      # Whisper(STT) & Coqui(TTS) 엔진
 │   └── chromadb_utils.py    # 벡터 저장소 관리
 └── README.md
-
+```
 ---
 
 ## 🌿 Branch Strategy (브랜치 전략)
@@ -74,10 +74,10 @@ Study-Flow/
   ollama pull llama3.2-vision
 
 ### 2. Python 라이브러리 설치
-프로젝트 구동에 필요한 핵심 라이브러리들을 아래 명령어로 설치합니다. (Python 3.10 이상 권장)
+* 프로젝트 구동에 필요한 핵심 라이브러리들을 아래 명령어로 설치합니다. **(Python 3.10 이상 권장)**
 ```bash
-pip install langchain langchain-community ollama openai-whisper TTS fastapi uvicorn chromadb
-
+  pip install langchain langchain-community ollama openai-whisper TTS fastapi uvicorn chromadb
+```
 ### 3. 서버 실행 방법
 
 #### 🤖 AI 통합 서버 (Python/FastAPI)
