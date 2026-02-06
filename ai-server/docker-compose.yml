@@ -1,0 +1,25 @@
+services:
+  # 파이썬 AI 서버
+  ai-server:
+    build: ./ai-server
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ai-server:/app # 코드 수정 시 바로 반영되도록 연결
+    environment:
+      - OLLAMA_HOST=http://host.docker.internal:11434 # 로컬 Ollama와 통신
+
+  # Redis (이메일 인증이나 캐싱용)
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+
+  # MySQL (메인 데이터베이스)
+  db:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: 1234
+      MYSQL_DATABASE: study_db
