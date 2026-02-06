@@ -1,0 +1,24 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+      - redis
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/jo
+      SPRING_DATA_REDIS_HOST: redis
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: jo
+      MYSQL_ROOT_PASSWORD: 12345
+    ports:
+      - "3306:3306"
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
