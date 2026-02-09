@@ -27,7 +27,11 @@ public enum ErrorCode {
     ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "해당하는 방을 찾을 수 없습니다."),
 
     // 500
-    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류입니다."),;
+    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류입니다."),
+
+    // AI Server Error
+    AI_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "AI 서버와 통신 중 오류가 발생했습니다."),
+    IMAGE_PROCESSING_ERROR(HttpStatus.BAD_REQUEST, "이미지 처리 중 오류가 발생했습니다.");
 
     private final HttpStatus httpStatus;
     private final String massage;
