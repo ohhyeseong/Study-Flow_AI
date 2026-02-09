@@ -1,16 +1,16 @@
 package com.example.study_flow_server.user.controller;
 
+import com.example.study_flow_server.user.domain.CustomUserDetails;
+import com.example.study_flow_server.user.domain.User;
+import com.example.study_flow_server.user.dto.UserCreateDto;
+import com.example.study_flow_server.user.dto.UserResponseDto;
+import com.example.study_flow_server.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import com.example.study_flow_server.user.domain.CustomUserDetails;
-import com.example.study_flow_server.user.domain.User;
-import com.example.study_flow_server.user.dto.UserCreateDto;
-import com.example.study_flow_server.user.dto.UserResponseDto;
-import com.example.study_flow_server.user.service.UserService;
 
 @RestController
 @RequiredArgsConstructor
@@ -52,6 +52,7 @@ public class UserController {
     //닉네임 변경
     @PatchMapping("/nickname")
     public ResponseEntity<User> updateNickname(@RequestBody UserCreateDto userCreateDto) {
+
         // 서비스 호출하여 닉네임 변경 실행
         User updatedUser = userService.updateNickname(userCreateDto);
 
@@ -59,4 +60,3 @@ public class UserController {
         return ResponseEntity.ok(updatedUser);
     }
 }
-

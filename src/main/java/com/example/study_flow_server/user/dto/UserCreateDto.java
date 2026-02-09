@@ -1,12 +1,12 @@
 package com.example.study_flow_server.user.dto;
 
 
+import com.example.study_flow_server.user.domain.User;
+import com.example.study_flow_server.user.domain.UserRole;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Builder;
-import jakarta.validation.constraints.Pattern;
 //사용자한테 받아오시
 @Builder
 public record UserCreateDto(
@@ -17,19 +17,17 @@ public record UserCreateDto(
         @NotBlank(message = "닉네임은 필수 입력 값입니다.")
         @Size(min = 4, max = 20, message = "닉네임은 4~20자 사이여야 합니다.")
         String nickname,
+
         @NotBlank(message = "비밀번호는 필수 입력 값입니다.")
-        @Pattern(
-                regexp = "^(?=.*[A-Z])(?=.*[!@#$%^&*(),.?\":{}|<>]).{8,20}$",
-                message = "비밀번호는 대문자와 특수문자를 포함하여 8~20자여야 합니다."
-        )
-
-
 
         String password,
 
         @Email
         @NotBlank(message = "이메일은 필수 입력 값입니다.")
-        String email
+        String email,
+
+        @NotBlank(message = "권한은 필수 입력 값입니다.")
+        String authCode
 )
 {
 
