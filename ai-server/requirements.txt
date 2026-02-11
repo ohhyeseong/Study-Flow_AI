@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+langchain
+langchain-ollama
+langchain-community
+langchain-chroma
+python-multipart
+pillow
+chromadb
+pypdf
+deep-translator
+easyocr
+opencv-python
