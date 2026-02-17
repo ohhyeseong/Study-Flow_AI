@@ -76,7 +76,7 @@ Study-Flow/
 ### 2. Python 라이브러리 설치
 * 프로젝트 구동에 필요한 핵심 라이브러리들을 아래 명령어로 설치합니다. **(Python 3.10 이상 권장)**
 ```bash
-  pip install langchain langchain-community ollama openai-whisper TTS fastapi uvicorn chromadb
+  pip install -r requirements.txt
 ```
 ### 3. 서버 실행 방법
 

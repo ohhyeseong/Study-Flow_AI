@@ -11,3 +11,5 @@ pypdf
 deep-translator
 easyocr
 opencv-python
+openai-whisper
+TTS @ git+https://github.com/coqui-ai/TTS
