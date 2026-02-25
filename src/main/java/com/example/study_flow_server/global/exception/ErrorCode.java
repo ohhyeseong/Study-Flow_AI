@@ -26,6 +26,8 @@ public enum ErrorCode {
 
     ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "해당하는 방을 찾을 수 없습니다."),
 
+    QUIZ_NOT_FOUND(HttpStatus.NOT_FOUND, "퀴즈를 찾을 수 없습니다."),
+
     // 500
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류입니다."),
 

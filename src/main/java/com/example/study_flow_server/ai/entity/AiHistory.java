@@ -1,5 +1,7 @@
 package com.example.study_flow_server.ai.entity;
 
+import com.example.study_flow_server.global.entity.BaseEntity;
+import com.example.study_flow_server.user.domain.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -14,7 +16,7 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)
-public class AiHistory {
+public class AiHistory extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,13 +30,15 @@ public class AiHistory {
 
     private String imageUrl;
 
-    @CreatedDate
-    private LocalDateTime createdAt;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @Builder
-    public AiHistory(String userPrompt, String aiResponse, String imageUrl) {
+    public AiHistory(String userPrompt, String aiResponse, String imageUrl,User user) {
         this.userPrompt = userPrompt;
         this.aiResponse = aiResponse;
         this.imageUrl = imageUrl;
+        this.user = user;
     }
 }

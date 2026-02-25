@@ -24,8 +24,9 @@ public class Quiz {
     @Column(nullable = false)
     private String question;
 
-    @Column(nullable = false)
     @ElementCollection
+    @CollectionTable(name = "quiz_options", joinColumns = @JoinColumn(name = "quiz_id"))
+    @Column(name = "option_text")
     private List<String> options;
 
     @Column(nullable = false)

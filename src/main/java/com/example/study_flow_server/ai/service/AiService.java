@@ -1,12 +1,18 @@
 package com.example.study_flow_server.ai.service;
 
 import com.example.study_flow_server.ai.dto.AiHistoryResponseDto;
+import com.example.study_flow_server.ai.dto.AiQuizDto;
 import com.example.study_flow_server.ai.dto.AiResponseDto;
 import com.example.study_flow_server.ai.entity.AiHistory;
+import com.example.study_flow_server.ai.entity.Quiz;
 import com.example.study_flow_server.ai.repository.AiHistoryRepository;
+import com.example.study_flow_server.ai.repository.QuizRepository;
 import com.example.study_flow_server.global.exception.CustomException;
 import com.example.study_flow_server.global.exception.ErrorCode;
+import com.example.study_flow_server.user.domain.User;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
@@ -20,21 +26,26 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class AiService {
 
     private final WebClient webClient;
     private final AiHistoryRepository aiHistoryRepository;
+    private final QuizRepository quizRepository;
+    private final ObjectMapper objectMapper;
+
 
     @Transactional
-    public Mono<AiResponseDto> analyzeImage(MultipartFile file, String prompt) {
+    public Mono<AiResponseDto> analyzeImage(User user, MultipartFile file, String prompt) {
         if (file.isEmpty()){
             return Mono.error(new CustomException(ErrorCode.IMAGE_PROCESSING_ERROR));
         }
+
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
         builder.part("file", file.getResource());
-        builder.part("prompt",prompt);
+        builder.part("prompt", prompt);
 
         return webClient.post()
                 .uri("/analyze-image")
@@ -44,24 +55,55 @@ public class AiService {
                 .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
                         clientResponse -> Mono.error(new CustomException(ErrorCode.AI_SERVER_ERROR)))
                 .bodyToMono(AiResponseDto.class)
-                .doOnNext(response -> { // 원래 flatMap이였는데 수정한 이유는
-                    // flatMap은 데이터(string) -> flatMap(int로 변환해! -> 데이터(int) 이런느낌이였지만
-                    // 현재 단순 대화 내용만 저장하는거기때문에 필요가 없기 때문에 doOnNext로 변환함.
+                .flatMap(response -> {
+                    // 1. AI 응답 원문 가져오기
+                    String fullResponse = response.aiResponse();
+                    String description = fullResponse;
+                    String quizJson = "";
+
+                    // 2. 파싱 로직: ###QUIZ### 태그를 기준으로 나눔
+                    if (fullResponse.contains("###QUIZ###")) {
+                        String[] parts = fullResponse.split("###QUIZ###");
+                        description = parts[0].trim(); // AI의 설명 부분
+                        if (parts.length > 1) {
+                            quizJson = parts[1].trim(); // JSON 데이터 부분
+                        }
+                    }
+
+                    // 3. AiHistory 저장 (설명 텍스트만 저장)
                     AiHistory history = AiHistory.builder()
+                            .user(user)
                             .userPrompt(prompt)
-                            .aiResponse(response.aiResponse())
-                            .imageUrl(response.filename())// 일단 파일명 저장 (나중에 S3 URL로 변경 가능)
+                            .aiResponse(description)
+                            .imageUrl(response.filename())
                             .build();
+                    AiHistory savedHistory = aiHistoryRepository.save(history);
 
-                    // 비동기 환경에서 JPA 저장을 위해 blocking 호출 필요 (또는 R2DBC 사용 고려)
-                    // 여기서는 간단하게 동기적으로 저장
-                    aiHistoryRepository.save(history);
+                    // 4. 퀴즈가 있다면 Quiz 테이블에 저장
+                    if (!quizJson.isEmpty()) {
+                        try {
+                            // 아까 만든 AiQuizDto record 사용
+                            AiQuizDto quizDto = objectMapper.readValue(quizJson, AiQuizDto.class);
 
+                            Quiz quiz = Quiz.builder()
+                                    .aiHistory(savedHistory)
+                                    .question(quizDto.question())
+                                    .options(quizDto.options())
+                                    .answer(quizDto.answer())
+                                    .build();
+                            quizRepository.save(quiz);
+                        } catch (Exception e) {
+                            // 퀴즈 파싱에 실패하더라도 전체 흐름이 깨지지 않게 로그만 남김
+                            log.error("Quiz JSON 파싱 에러: {}", e.getMessage());
+                        }
+                    }
+
+                    return Mono.just(response);
                 });
     }
 
-    public List<AiHistoryResponseDto> getHistoryList() {
-        return aiHistoryRepository.findAll().stream()
+    public List<AiHistoryResponseDto> getHistoryList(Long userId) {
+        return aiHistoryRepository.findAllByUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(AiHistoryResponseDto::from)
                 .collect(Collectors.toList());
     }
