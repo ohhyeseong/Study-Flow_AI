@@ -1,8 +1,8 @@
-package com.example.study_flow_server.domain.ai.controller;
+package com.example.study_flow_server.ai.controller;
 
-import com.example.study_flow_server.domain.ai.dto.AiHistoryResponseDto;
-import com.example.study_flow_server.domain.ai.dto.AiResponseDto;
-import com.example.study_flow_server.domain.ai.service.AiService;
+import com.example.study_flow_server.ai.dto.AiHistoryResponseDto;
+import com.example.study_flow_server.ai.dto.AiResponseDto;
+import com.example.study_flow_server.ai.service.AiService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;

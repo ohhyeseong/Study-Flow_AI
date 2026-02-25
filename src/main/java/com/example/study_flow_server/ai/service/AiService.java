@@ -1,9 +1,9 @@
-package com.example.study_flow_server.domain.ai.service;
+package com.example.study_flow_server.ai.service;
 
-import com.example.study_flow_server.domain.ai.dto.AiHistoryResponseDto;
-import com.example.study_flow_server.domain.ai.dto.AiResponseDto;
-import com.example.study_flow_server.domain.ai.entity.AiHistory;
-import com.example.study_flow_server.domain.ai.repository.AiHistoryRepository;
+import com.example.study_flow_server.ai.dto.AiHistoryResponseDto;
+import com.example.study_flow_server.ai.dto.AiResponseDto;
+import com.example.study_flow_server.ai.entity.AiHistory;
+import com.example.study_flow_server.ai.repository.AiHistoryRepository;
 import com.example.study_flow_server.global.exception.CustomException;
 import com.example.study_flow_server.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;

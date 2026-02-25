@@ -1,4 +1,4 @@
-package com.example.study_flow_server.domain.ai.entity;
+package com.example.study_flow_server.ai.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;

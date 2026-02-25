@@ -91,39 +91,26 @@ async def analyze_image(
     ai_response = ""
     mode = ""
 
+    # 공유 퀴즈 가이드 (텍스트가 있든 없든 마지막에 퀴즈를 붙이게 함)
+    quiz_instruction = (
+        "\n\n--- 필수 요구사항 ---\n"
+        "답변 마지막에 반드시 ###QUIZ### 태그를 사용해 JSON 형식의 퀴즈를 포함하세요.\n"
+        "형식: ###QUIZ### {\"question\": \"문제\", \"options\": [\"1번\", \"2번\", \"3번\", \"4번\"], \"answer\": \"정답번호\"} ###QUIZ###"
+    )
+
     # 2. 분기 처리: 텍스트 유무에 따라 다른 모델 사용
     if extracted_text.strip():
         # [CASE A] 텍스트가 있음 -> Llama 3.2로 문제 풀이
         mode = "Text/Code Analysis"
         
         system_prompt = (
-            "You are an expert programming tutor. "
-            "The text provided below is extracted from an image using OCR and contains BROKEN code. "
-            "Your task is to RECONSTRUCT the code exactly as intended and SOLVE the problem. "
-            "\n\n"
-            "IMPORTANT RULES:\n"
-            "1. Respond in KOREAN, but keep the code in ENGLISH.\n"
-            "2. Do NOT invent 'if' conditions or logic that are not present in the OCR text.\n"
-            "3. Infer the input values from the user's prompt or the OCR text context.\n"
-            "\n\n"
-            "Common OCR Error Patterns to fix:\n"
-            "- 'Iair', 'rnain' -> 'main'\n"
-            "- 'irt' -> 'int'\n"
-            "- '1en', '1eri', 'lenl' -> 'len'\n"
-            "- 'gets (str)' -> 'gets(str);'\n"
-            "- 'printE', 'priritf' -> 'printf'\n"
-            "- '용d' -> '%d'\n"
-            "\n\n"
-            f"OCR Text:\n{extracted_text}\n\n"
-            "Task:\n"
-            "1. Reconstruct the correct code.\n"
-            "2. Explain the logic step-by-step in Korean.\n"
-            "3. Provide the final output."
+                "당신은 프로그래밍 튜터입니다. OCR로 추출된 코드를 복구하고 설명하세요. "
+                "모든 설명은 한국어로 하세요." + quiz_instruction
         )
         
         messages = [
             SystemMessage(content=system_prompt),
-            HumanMessage(content=prompt),
+            HumanMessage(content=f"OCR 텍스트: {extracted_text}\n사용자 질문: {prompt}"),
         ]
         
         response = llm_text.invoke(messages)
@@ -133,39 +120,22 @@ async def analyze_image(
         # [CASE B] 텍스트가 없음 -> Moondream으로 이미지 설명
         mode = "General Image Description"
         base64_image = encode_image_to_base64(file)
-        
-        # 한국어 질문 -> 영어 번역 (Moondream용)
-        try:
-            translated_prompt = GoogleTranslator(source='auto', target='en').translate(prompt)
-        except Exception:
-            translated_prompt = prompt
 
-        system_prompt = (
-            "You are a helpful AI assistant. "
-            "Describe the image in detail and answer the user's question."
-        )
-
+        # 1단계: Moondream으로 이미지 묘사 (영문)
         messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(
-                content=[
-                    {"type": "text", "text": translated_prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/png;base64,{base64_image}"},
-                    },
-                ]
-            ),
+            SystemMessage(content="Describe this image in detail."),
+            HumanMessage(content=[{"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]),
         ]
-        
-        response = llm_vision.invoke(messages)
-        english_response = response.content
-        
-        # 영어 답변 -> 한국어 번역
-        try:
-            ai_response = GoogleTranslator(source='en', target='ko').translate(english_response)
-        except Exception:
-            ai_response = english_response
+        vision_res = llm_vision.invoke(messages)
+
+        # 2단계: 묘사된 내용을 Llama 3.2에게 전달하여 한국어 설명 + 퀴즈 생성 (이게 더 정확함)
+        refine_prompt = (
+                f"다음은 이미지에 대한 설명이야: {vision_res.content}\n"
+                f"이 내용을 바탕으로 사용자의 질문('{prompt}')에 한국어로 답하고 퀴즈를 하나 내줘."
+                + quiz_instruction
+        )
+        response = llm_text.invoke([HumanMessage(content=refine_prompt)])
+        ai_response = response.content
 
     # 3. ChromaDB에 저장
     doc = Document(

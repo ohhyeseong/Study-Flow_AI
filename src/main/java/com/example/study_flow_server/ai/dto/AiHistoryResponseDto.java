@@ -1,6 +1,6 @@
-package com.example.study_flow_server.domain.ai.dto;
+package com.example.study_flow_server.ai.dto;
 
-import com.example.study_flow_server.domain.ai.entity.AiHistory;
+import com.example.study_flow_server.ai.entity.AiHistory;
 
 import java.time.LocalDateTime;
 
