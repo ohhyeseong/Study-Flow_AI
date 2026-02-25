@@ -1,4 +1,3 @@
-
 package com.example.study_flow_server.user.controller;
 
 import com.example.study_flow_server.jwt.TokenResponseDto;
@@ -31,6 +30,7 @@ public class AuthController {
         authService.logout(token);
         return ResponseEntity.ok("로그아웃 성공");
     }
+
 
     // 3. 토큰 재발급
     @PostMapping("/reissue")

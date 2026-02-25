@@ -1,5 +1,6 @@
 package com.example.study_flow_server.user.domain;
 
+import com.example.study_flow_server.user.domain.User; // 1. 우리 엔티티 유저를 임포트!
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
