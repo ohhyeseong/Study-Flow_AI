@@ -1,5 +1,6 @@
-package com.example.study_flow_server.user.domain;
+package com.example.study_flow_server.global.security;
 
+import com.example.study_flow_server.user.domain.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

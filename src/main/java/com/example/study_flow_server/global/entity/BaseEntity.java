@@ -1,4 +1,4 @@
-package com.example.study_flow_server.global;
+package com.example.study_flow_server.global.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;

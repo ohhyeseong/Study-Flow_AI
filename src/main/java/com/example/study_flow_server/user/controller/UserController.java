@@ -1,6 +1,6 @@
 package com.example.study_flow_server.user.controller;
 
-import com.example.study_flow_server.user.domain.CustomUserDetails;
+import com.example.study_flow_server.global.security.CustomUserDetails;
 import com.example.study_flow_server.user.domain.User;
 import com.example.study_flow_server.user.dto.UserCreateDto;
 import com.example.study_flow_server.user.dto.UserResponseDto;

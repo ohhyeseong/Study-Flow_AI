@@ -14,7 +14,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.filter.OncePerRequestFilter;
-import com.example.study_flow_server.user.service.CustomUserDetailsService;
+import com.example.study_flow_server.global.security.CustomUserDetailsService;
 
 import java.io.IOException;
 

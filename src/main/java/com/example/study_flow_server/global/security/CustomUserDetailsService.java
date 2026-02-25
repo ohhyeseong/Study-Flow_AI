@@ -1,6 +1,5 @@
-package com.example.study_flow_server.user.service;
+package com.example.study_flow_server.global.security;
 
-import com.example.study_flow_server.user.domain.CustomUserDetails;
 import com.example.study_flow_server.user.domain.User;
 import com.example.study_flow_server.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
