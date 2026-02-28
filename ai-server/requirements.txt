@@ -8,7 +8,6 @@ python-multipart
 pillow
 chromadb
 pypdf
-deep-translator
-easyocr
-opencv-python
 openai-whisper
+google-generativeai
+python-dotenv

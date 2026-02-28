@@ -1,18 +1,17 @@
-import base64
-import io
+import os
 import uuid
-import easyocr
-import numpy as np
-import cv2
+import google.generativeai as genai
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from langchain_ollama import ChatOllama, OllamaEmbeddings
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_ollama import OllamaEmbeddings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 import uvicorn
-from PIL import Image
-from deep_translator import GoogleTranslator
+from dotenv import load_dotenv
+from typing import Optional
+
+# .env 파일 로드
+load_dotenv()
 
 app = FastAPI()
 
@@ -25,137 +24,90 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 1. AI 모델 설정
-# - Llama 3.2: 텍스트 분석 및 코딩 문제 풀이용
-llm_text = ChatOllama(model="llama3.2", temperature=0)
-# - Moondream: 일반 이미지 설명용 (텍스트가 없을 때 사용)
-llm_vision = ChatOllama(model="moondream", temperature=0)
+# 1. API 키 설정 (환경변수 관리 권장)
+api_key = os.environ.get("GOOGLE_API_KEY")
+if not api_key:
+    print("Warning: GOOGLE_API_KEY environment variable not set. Please check your .env file.")
 
-# 2. 임베딩 모델 설정
+genai.configure(api_key=api_key)
+
+# 2. 모델 초기화 (Gemini 2.0 Flash는 속도와 성능이 뛰어납니다)
+model = genai.GenerativeModel('gemini-2.0-flash')
+
+# 3. 임베딩 모델 설정 (기존 유지)
 embeddings = OllamaEmbeddings(model="nomic-embed-text")
 
-# 3. ChromaDB 설정
+# 4. ChromaDB 설정 (기존 유지)
 vector_store = Chroma(
     collection_name="study_notes",
     embedding_function=embeddings,
     persist_directory="./chroma_db"
 )
 
-# 4. EasyOCR 리더 초기화
-reader = easyocr.Reader(['ko', 'en'])
-
-def extract_text_from_image(image_file: UploadFile) -> str:
-    try:
-        image_file.file.seek(0)
-        image_bytes = image_file.file.read()
-        image = Image.open(io.BytesIO(image_bytes))
-        image_np = np.array(image)
-        
-        # 이미지 전처리
-        gray = cv2.cvtColor(image_np, cv2.COLOR_RGB2GRAY)
-        _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        
-        result = reader.readtext(binary, detail=0)
-        return " ".join(result)
-    except Exception as e:
-        print(f"OCR Error: {str(e)}")
-        return ""
-    finally:
-        image_file.file.seek(0)
-
-def encode_image_to_base64(image_file: UploadFile) -> str:
-    try:
-        image_file.file.seek(0)
-        image = Image.open(image_file.file)
-        buffered = io.BytesIO()
-        image.save(buffered, format="PNG")
-        return base64.b64encode(buffered.getvalue()).decode("utf-8")
-    except Exception as e:
-        return ""
-    finally:
-        image_file.file.seek(0)
-
 @app.get("/")
 def read_root():
-    return {"message": "AI Server is running!"}
+    return {"message": "AI Server is running with Gemini 2.0 Flash!"}
 
 @app.post("/analyze-image")
 async def analyze_image(
         prompt: str = Form(...),
-        file: UploadFile = File(...)
+        file: Optional[UploadFile] = File(None)
 ):
-    # 1. OCR로 텍스트 추출
-    extracted_text = extract_text_from_image(file)
-    print(f"Extracted Text: {extracted_text}")
+    try:
+        ai_response = ""
+        source_filename = "text_only"
 
-    ai_response = ""
-    mode = ""
+        if file:
+            # [CASE 1] 이미지가 있는 경우
+            source_filename = file.filename
+            file_bytes = await file.read()
 
-    # 공유 퀴즈 가이드 (텍스트가 있든 없든 마지막에 퀴즈를 붙이게 함)
-    quiz_instruction = (
-        "\n\n--- 필수 요구사항 ---\n"
-        "답변 마지막에 반드시 ###QUIZ### 태그를 사용해 JSON 형식의 퀴즈를 포함하세요.\n"
-        "형식: ###QUIZ### {\"question\": \"문제\", \"options\": [\"1번\", \"2번\", \"3번\", \"4번\"], \"answer\": \"정답번호\"} ###QUIZ###"
-    )
+            system_instruction = (
+                "당신은 프로그래밍 튜터입니다. 업로드된 이미지는 코딩 문제이거나 학습 관련 자료입니다.\n"
+                "1. 이미지의 내용을 정확히 분석하고 사용자의 질문에 답변하세요.\n"
+                "2. 코드가 포함된 경우, 코드를 복구하고 실행 결과를 예측하거나 오류를 수정하세요.\n"
+                "3. 답변은 반드시 한국어로 작성하세요.\n"
+                "4. 답변 마지막에 반드시 아래 형식의 JSON 퀴즈를 포함하세요.\n"
+                "###QUIZ### {\"question\": \"...\", \"options\": [\"...\", \"...\", \"...\", \"...\"], \"answer\": \"...\"} ###QUIZ###"
+            )
 
-    # 2. 분기 처리: 텍스트 유무에 따라 다른 모델 사용
-    if extracted_text.strip():
-        # [CASE A] 텍스트가 있음 -> Llama 3.2로 문제 풀이
-        mode = "Text/Code Analysis"
-        
-        system_prompt = (
-                "당신은 프로그래밍 튜터입니다. OCR로 추출된 코드를 복구하고 설명하세요. "
-                "모든 설명은 한국어로 하세요." + quiz_instruction
+            response = model.generate_content([
+                {"mime_type": file.content_type, "data": file_bytes},
+                f"{system_instruction}\n\n사용자 질문: {prompt}"
+            ])
+            ai_response = response.text
+        else:
+            # [CASE 2] 이미지가 없는 경우 (텍스트 전용)
+            system_instruction = (
+                "당신은 프로그래밍 튜터입니다. 사용자의 질문에 답변하고, 관련된 퀴즈를 하나 만들어주세요.\n"
+                "1. 사용자의 질문에 대해 상세하고 친절하게 설명해주세요.\n"
+                "2. 답변은 반드시 한국어로 작성하세요.\n"
+                "3. 답변 마지막에 반드시 아래 형식의 JSON 퀴즈를 포함하세요.\n"
+                "###QUIZ### {\"question\": \"...\", \"options\": [\"...\", \"...\", \"...\", \"...\"], \"answer\": \"...\"} ###QUIZ###"
+            )
+            response = model.generate_content(f"{system_instruction}\n\n사용자 질문: {prompt}")
+            ai_response = response.text
+
+        # DB 저장 로직
+        doc = Document(
+            page_content=f"질문: {prompt}\n답변: {ai_response}",
+            metadata={
+                "source": source_filename,
+                "type": "text_or_image_analysis",
+                "id": str(uuid.uuid4())
+            }
         )
-        
-        messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=f"OCR 텍스트: {extracted_text}\n사용자 질문: {prompt}"),
-        ]
-        
-        response = llm_text.invoke(messages)
-        ai_response = response.content
+        vector_store.add_documents([doc])
 
-    else:
-        # [CASE B] 텍스트가 없음 -> Moondream으로 이미지 설명
-        mode = "General Image Description"
-        base64_image = encode_image_to_base64(file)
-
-        # 1단계: Moondream으로 이미지 묘사 (영문)
-        messages = [
-            SystemMessage(content="Describe this image in detail."),
-            HumanMessage(content=[{"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]),
-        ]
-        vision_res = llm_vision.invoke(messages)
-
-        # 2단계: 묘사된 내용을 Llama 3.2에게 전달하여 한국어 설명 + 퀴즈 생성 (이게 더 정확함)
-        refine_prompt = (
-                f"다음은 이미지에 대한 설명이야: {vision_res.content}\n"
-                f"이 내용을 바탕으로 사용자의 질문('{prompt}')에 한국어로 답하고 퀴즈를 하나 내줘."
-                + quiz_instruction
-        )
-        response = llm_text.invoke([HumanMessage(content=refine_prompt)])
-        ai_response = response.content
-
-    # 3. ChromaDB에 저장
-    doc = Document(
-        page_content=f"질문: {prompt}\n모드: {mode}\nOCR 텍스트: {extracted_text}\n답변: {ai_response}",
-        metadata={
-            "source": file.filename,
-            "type": "image_analysis",
-            "id": str(uuid.uuid4())
+        return {
+            "filename": source_filename,
+            "ai_response": ai_response,
+            "db_status": "Saved to memory"
         }
-    )
-    vector_store.add_documents([doc])
 
-    return {
-        "filename": file.filename,
-        "user_prompt": prompt,
-        "mode": mode,
-        "extracted_text": extracted_text,
-        "ai_response": ai_response,
-        "db_status": "Saved to memory"
-    }
+    except Exception as e:
+        print(f"Error during analysis: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/search-memory")
 def search_memory(query: str):

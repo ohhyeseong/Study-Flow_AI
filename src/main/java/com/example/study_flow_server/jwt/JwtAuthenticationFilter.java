@@ -1,6 +1,5 @@
 package com.example.study_flow_server.jwt;
 
-// 패키지 경로 수정
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -17,6 +16,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import com.example.study_flow_server.global.security.CustomUserDetailsService;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -24,6 +25,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
+
+    // 필터 적용을 제외할 경로 목록
+    private static final List<String> EXCLUDE_URLS = Arrays.asList(
+            "/api/users/signup",
+            "/api/auth/login",
+            "/error",
+            "/swagger-ui",
+            "/v3/api-docs"
+    );
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getRequestURI();
+        return EXCLUDE_URLS.stream().anyMatch(path::startsWith);
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
