@@ -25,9 +25,11 @@ public class QuizResult extends BaseEntity {
     @JoinColumn(name = "quiz_id")
     private Quiz quiz;
 
+    @Column(nullable = false)
     private String userAnswer; // 사용자가 제출한 답
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private SolveStatus status; // CORRECT 또는 WRONG
 
     @Builder

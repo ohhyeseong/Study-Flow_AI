@@ -30,15 +30,19 @@ public class AiHistory extends BaseEntity {
 
     private String imageUrl;
 
+    @OneToOne(mappedBy = "aiHistory", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Quiz quiz;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
 
     @Builder
-    public AiHistory(String userPrompt, String aiResponse, String imageUrl,User user) {
+    public AiHistory(String userPrompt, String aiResponse, String imageUrl,Quiz quiz,User user) {
         this.userPrompt = userPrompt;
         this.aiResponse = aiResponse;
         this.imageUrl = imageUrl;
+        this.quiz = quiz;
         this.user = user;
     }
 }

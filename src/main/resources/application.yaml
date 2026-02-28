@@ -27,6 +27,6 @@ spring:
 # logging은 spring 아래가 아니라 밖으로 꺼내야 합니다.
 logging:
   level:
-    org:
-      springframework:
-        security: DEBUG
+    org.hibernate.SQL: DEBUG        # Hibernate가 생성하는 실행 SQL 출력
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE # SQL에 바인딩되는 파라미터(?, ?) 값 확인
+    org.springframework.security: DEBUG # 시큐리티 필터 및 권한 확인 로그

@@ -22,6 +22,7 @@ public class QuizService {
     private final QuizResultRepository quizResultRepository;
 
 
+    @Transactional
     public boolean submitAnswer(User user, QuizSubmitRequest request) {
         // 1. 문제 찾기
         Quiz quiz = quizRepository.findById(request.quizId())

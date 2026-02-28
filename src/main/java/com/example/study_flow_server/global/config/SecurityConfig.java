@@ -3,6 +3,7 @@ package com.example.study_flow_server.global.config;
 import com.example.study_flow_server.global.security.CustomUserDetailsService;
 import com.example.study_flow_server.jwt.JwtAuthenticationFilter;
 import com.example.study_flow_server.jwt.JwtUtil;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -43,7 +44,9 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // 세션 미사용
                 )
                 .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         .requestMatchers("/api/auth/**", "/error","/api/users/signup", "/api/auth/login", "/ws-chat/**", "/*.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/analyze-image").authenticated()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtUtil, userDetailsService), UsernamePasswordAuthenticationFilter.class);
