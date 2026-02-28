@@ -1,0 +1,115 @@
+package com.example.study_flow_server.chat.service;
+
+import com.example.study_flow_server.chat.domain.ChatMessage;
+import com.example.study_flow_server.chat.domain.ChatRoom;
+import com.example.study_flow_server.chat.domain.ChatRoomMember;
+import com.example.study_flow_server.chat.dto.ChatCreateDto;
+import com.example.study_flow_server.chat.dto.ChatResponseDto;
+import com.example.study_flow_server.chat.dto.ChatRoomDto;
+import com.example.study_flow_server.chat.repository.ChatRepository;
+import com.example.study_flow_server.chat.repository.ChatRoomMemberRepository;
+import com.example.study_flow_server.chat.repository.ChatRoomRepository;
+import com.example.study_flow_server.user.domain.User;
+import com.example.study_flow_server.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class ChatService {
+
+    private final ChatRepository chatRepository;
+    private final UserRepository userRepository;
+    private final ChatRoomRepository chatRoomRepository;
+    private final ChatRoomMemberRepository chatRoomMemberRepository;
+
+    /**
+     * 채팅방 생성
+     */
+    @Transactional
+    public ChatRoomDto createRoom(String title, Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        ChatRoom chatRoom = ChatRoom.builder()
+                .title(title)
+                .creator(user)
+                .build();
+
+        chatRoomRepository.save(chatRoom);
+        
+        // 방장도 멤버로 추가
+        enterRoom(chatRoom.getId(), userId);
+
+        return ChatRoomDto.from(chatRoom);
+    }
+
+    /**
+     * 채팅방 입장 (멤버 추가)
+     */
+    @Transactional
+    public void enterRoom(Long roomId, Long userId) {
+        ChatRoom chatRoom = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new IllegalArgumentException("채팅방을 찾을 수 없습니다."));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        // 이미 참여 중인지 확인
+        if (chatRoomMemberRepository.findByChatRoomAndUser(chatRoom, user).isPresent()) {
+            return;
+        }
+
+        ChatRoomMember member = ChatRoomMember.builder()
+                .chatRoom(chatRoom)
+                .user(user)
+                .build();
+
+        chatRoomMemberRepository.save(member);
+    }
+
+    /**
+     * 채팅 메시지 저장
+     */
+    @Transactional
+    public ChatResponseDto saveMessage(Long userId, ChatCreateDto chatCreateDto) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        ChatRoom chatRoom = chatRoomRepository.findById(chatCreateDto.roomId())
+                .orElseThrow(() -> new IllegalArgumentException("채팅방을 찾을 수 없습니다."));
+
+        // 메시지 엔티티 생성 및 빌드
+        ChatMessage chatMessage = ChatMessage.builder()
+                .content(chatCreateDto.content())
+                .chatRoom(chatRoom)
+                .sender(user)
+                .build();
+
+        chatRepository.save(chatMessage);
+
+        return ChatResponseDto.from(chatMessage);
+    }
+
+    /**
+     * 특정 방의 채팅 내역 조회
+     */
+    public List<ChatResponseDto> getChatMessages(Long roomId) {
+        return chatRepository.findAllByChatRoomIdOrderByCreatedAtAsc(roomId).stream()
+                .map(ChatResponseDto::from)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * 전체 채팅방 목록 조회
+     */
+    public List<ChatRoomDto> getAllRooms() {
+        return chatRoomRepository.findAll().stream()
+                .map(ChatRoomDto::from)
+                .collect(Collectors.toList());
+    }
+}

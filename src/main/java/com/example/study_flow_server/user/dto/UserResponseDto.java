@@ -1,7 +1,5 @@
 package com.example.study_flow_server.user.dto;
 
-
-
 public record UserResponseDto(
         Long id,
         String password,
@@ -12,4 +10,4 @@ public record UserResponseDto(
 ) {
 
 
-}
+    }

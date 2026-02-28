@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: jangmin
+    name: demo
 
   data:
     redis:
@@ -11,10 +11,10 @@ spring:
       port: 6379
 
   datasource:
-    url: jdbc:mysql://localhost:3306/jangmin
+    url: jdbc:mysql://localhost:3306/demo
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
-    password: "12345"
+    password: 1234
 
   jpa:
     hibernate:

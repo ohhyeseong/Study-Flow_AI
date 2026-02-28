@@ -1,17 +1,12 @@
 package com.example.study_flow_server.user.service;
 
-
+import com.example.study_flow_server.jwt.*;
+import com.example.study_flow_server.redis.RedisService;
+import com.example.study_flow_server.user.dto.LoginRequestDto;
 import io.jsonwebtoken.Claims;
-import com.example.study_flow_server.jwt.JwtUtil;
-import com.example.study_flow_server.jwt.TokenResponseDto;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.example.study_flow_server.redis.RedisService;
-import com.example.study_flow_server.user.domain.User;
-import com.example.study_flow_server.user.dto.LoginRequestDto;
-import com.example.study_flow_server.user.repository.UserRepository;
 
 import java.time.Duration;
 
@@ -21,23 +16,11 @@ public class AuthService {
 
     private final JwtUtil jwtUtil;
     private final RedisService redisService;
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public TokenResponseDto login(LoginRequestDto loginRequestDto) {
         String username = loginRequestDto.username();
-        String password = loginRequestDto.password();
-
-        // 1. 사용자 검증
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("등록된 사용자가 없습니다."));
-
-        if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
-        }
-
-        String role = user.getRole().toString();
+        String role = "USER"; // 실제로는 DB에서 조회한 Role을 사용해야 함
 
         String accessToken = jwtUtil.createToken(username, role);
         String refreshToken = jwtUtil.createRefreshToken(username);

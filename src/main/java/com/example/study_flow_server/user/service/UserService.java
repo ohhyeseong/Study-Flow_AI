@@ -1,4 +1,3 @@
-
 package com.example.study_flow_server.user.service;
 
 import com.example.study_flow_server.jwt.JwtUtil;
@@ -31,12 +30,12 @@ public class UserService {
             throw new IllegalArgumentException("아이디가 이미 존재합니다.");
         }
 
-//        // 2.  이메일 인증 완료 여부 검증
-//        // EmailService.verifyCode 성공 시 저장한 "DONE:{email}" 키를 조회합니다.
-//        String isVerified = redisService.getValues("DONE:" + userCreateDto.email());
-//        if (!"true".equals(isVerified)) {
-//            throw new IllegalArgumentException("이메일 인증이 완료되지 않았습니다.");
-//        }
+        // 2.  이메일 인증 완료 여부 검증
+        // EmailService.verifyCode 성공 시 저장한 "DONE:{email}" 키를 조회합니다.
+        String isVerified = redisService.getValues("DONE:" + userCreateDto.email());
+        if (!"true".equals(isVerified)) {
+            throw new IllegalArgumentException("이메일 인증이 완료되지 않았습니다.");
+        }
 
         // 3. 사용자 객체 생성
         User user = User.builder()
@@ -57,6 +56,23 @@ public class UserService {
 
 
 
+    }
+
+    // 로그인 (AuthService가 있다면 이 메서드는 향후 제거해도 좋습니다)
+    @Transactional(readOnly = true)
+    public void login(LoginRequestDto loginRequestDto, HttpServletResponse response) {
+        String username = loginRequestDto.username();
+        String password = loginRequestDto.password();
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("등록된 사용자가 없습니다."));
+
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+        }
+
+        String token = jwtUtil.createToken(user.getUsername(), user.getRole().toString());
+        response.addHeader(JwtUtil.AUTHORIZATION_HEADER, token);
     }
 
     // 닉네임 변경

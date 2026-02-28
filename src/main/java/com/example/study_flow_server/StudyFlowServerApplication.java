@@ -9,7 +9,11 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @SpringBootApplication
 @EnableJpaRepositories(basePackages = {
 		"com.example.study_flow_server.ai.repository",
-		"com.example.study_flow_server.user.repository"
+		"com.example.study_flow_server.user.repository",
+		"com.example.study_flow_server.chat.repository",
+		"com.example.study_flow_server.comment.repository",
+		"com.example.study_flow_server.post.repository",
+		"com.example.study_flow_server.landmark.repository"
 })
 public class StudyFlowServerApplication {
 

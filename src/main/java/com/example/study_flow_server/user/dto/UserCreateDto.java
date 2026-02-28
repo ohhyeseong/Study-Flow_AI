@@ -1,13 +1,10 @@
 package com.example.study_flow_server.user.dto;
 
-
-import com.example.study_flow_server.user.domain.User;
-import com.example.study_flow_server.user.domain.UserRole;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Builder;
-//사용자한테 받아오기
+//사용자한테 받아오시
 @Builder
 public record UserCreateDto(
         @NotBlank(message = "아이디는 필수 입력 값입니다.")
@@ -19,14 +16,15 @@ public record UserCreateDto(
         String nickname,
 
         @NotBlank(message = "비밀번호는 필수 입력 값입니다.")
+
         String password,
 
         @Email
         @NotBlank(message = "이메일은 필수 입력 값입니다.")
-        String email
+        String email,
 
-//        @NotBlank(message = "권한은 필수 입력 값입니다.")
-//        String authCode
+        @NotBlank(message = "권한은 필수 입력 값입니다.")
+        String authCode
 )
 {
 
