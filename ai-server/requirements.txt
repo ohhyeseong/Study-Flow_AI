@@ -9,5 +9,5 @@ pillow
 chromadb
 pypdf
 openai-whisper
-google-generativeai
 python-dotenv
+anthropic

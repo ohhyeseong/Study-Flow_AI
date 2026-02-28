@@ -7,6 +7,7 @@ build/
 
 ### Spring Boot ###
 src/main/resources/application.yaml
+ai-server/.env
 
 ### STS ###
 .apt_generated

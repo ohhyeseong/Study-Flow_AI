@@ -1,6 +1,6 @@
 import os
 import uuid
-import google.generativeai as genai
+import base64
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_ollama import OllamaEmbeddings
@@ -9,6 +9,7 @@ from langchain_core.documents import Document
 import uvicorn
 from dotenv import load_dotenv
 from typing import Optional
+import anthropic
 
 # .env 파일 로드
 load_dotenv()
@@ -24,15 +25,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 1. API 키 설정 (환경변수 관리 권장)
-api_key = os.environ.get("GOOGLE_API_KEY")
+# 1. API 키 설정
+api_key = os.environ.get("ANTHROPIC_API_KEY")
 if not api_key:
-    print("Warning: GOOGLE_API_KEY environment variable not set. Please check your .env file.")
+    print("Warning: ANTHROPIC_API_KEY environment variable not set. Please check your .env file.")
 
-genai.configure(api_key=api_key)
-
-# 2. 모델 초기화 (Gemini 2.0 Flash는 속도와 성능이 뛰어납니다)
-model = genai.GenerativeModel('gemini-2.0-flash')
+# 2. Claude 클라이언트 초기화
+client = anthropic.Anthropic(api_key=api_key)
 
 # 3. 임베딩 모델 설정 (기존 유지)
 embeddings = OllamaEmbeddings(model="nomic-embed-text")
@@ -46,7 +45,7 @@ vector_store = Chroma(
 
 @app.get("/")
 def read_root():
-    return {"message": "AI Server is running with Gemini 2.0 Flash!"}
+    return {"message": "AI Server is running with Claude Sonnet 4.6!"}
 
 @app.post("/analyze-image")
 async def analyze_image(
@@ -57,36 +56,57 @@ async def analyze_image(
         ai_response = ""
         source_filename = "text_only"
 
+        # 입력값 검증
+        if not prompt.strip():
+            raise HTTPException(status_code=400, detail="Prompt is empty")
+
+        system_instruction = (
+            "당신은 프로그래밍 튜터입니다. 한국어로 답변하고 마지막에 반드시 ###QUIZ### 형식을 지키세요.\n"
+            "형식: ###QUIZ### {\"question\": \"...\", \"options\": [\"...\", \"...\", \"...\", \"...\"], \"answer\": \"...\"} ###QUIZ###"
+        )
+
+        messages = []
+
         if file:
-            # [CASE 1] 이미지가 있는 경우
             source_filename = file.filename
             file_bytes = await file.read()
+            base64_image = base64.b64encode(file_bytes).decode("utf-8")
+            media_type = file.content_type
 
-            system_instruction = (
-                "당신은 프로그래밍 튜터입니다. 업로드된 이미지는 코딩 문제이거나 학습 관련 자료입니다.\n"
-                "1. 이미지의 내용을 정확히 분석하고 사용자의 질문에 답변하세요.\n"
-                "2. 코드가 포함된 경우, 코드를 복구하고 실행 결과를 예측하거나 오류를 수정하세요.\n"
-                "3. 답변은 반드시 한국어로 작성하세요.\n"
-                "4. 답변 마지막에 반드시 아래 형식의 JSON 퀴즈를 포함하세요.\n"
-                "###QUIZ### {\"question\": \"...\", \"options\": [\"...\", \"...\", \"...\", \"...\"], \"answer\": \"...\"} ###QUIZ###"
-            )
-
-            response = model.generate_content([
-                {"mime_type": file.content_type, "data": file_bytes},
-                f"{system_instruction}\n\n사용자 질문: {prompt}"
-            ])
-            ai_response = response.text
+            messages.append({
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": media_type,
+                            "data": base64_image,
+                        },
+                    },
+                    {
+                        "type": "text",
+                        "text": f"{system_instruction}\n\n사용자 질문: {prompt}"
+                    }
+                ],
+            })
         else:
-            # [CASE 2] 이미지가 없는 경우 (텍스트 전용)
-            system_instruction = (
-                "당신은 프로그래밍 튜터입니다. 사용자의 질문에 답변하고, 관련된 퀴즈를 하나 만들어주세요.\n"
-                "1. 사용자의 질문에 대해 상세하고 친절하게 설명해주세요.\n"
-                "2. 답변은 반드시 한국어로 작성하세요.\n"
-                "3. 답변 마지막에 반드시 아래 형식의 JSON 퀴즈를 포함하세요.\n"
-                "###QUIZ### {\"question\": \"...\", \"options\": [\"...\", \"...\", \"...\", \"...\"], \"answer\": \"...\"} ###QUIZ###"
-            )
-            response = model.generate_content(f"{system_instruction}\n\n사용자 질문: {prompt}")
-            ai_response = response.text
+            messages.append({
+                "role": "user",
+                "content": f"{system_instruction}\n\n사용자 질문: {prompt}"
+            })
+
+        # API 호출 (최신 모델 사용)
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1024,
+            messages=messages
+        )
+        
+        if response.content and len(response.content) > 0:
+            ai_response = response.content[0].text
+        else:
+            ai_response = "No response from AI."
 
         # DB 저장 로직
         doc = Document(
@@ -106,8 +126,9 @@ async def analyze_image(
         }
 
     except Exception as e:
-        print(f"Error during analysis: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        error_msg = str(e)
+        print(f"Error during analysis: {error_msg}")
+        raise HTTPException(status_code=500, detail=error_msg)
 
 @app.get("/search-memory")
 def search_memory(query: str):

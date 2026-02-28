@@ -40,13 +40,10 @@ public class AiService {
 
     @Transactional
     public Mono<AiResponseDto> analyzeImage(User user, MultipartFile file, String prompt) {
-        if (file.isEmpty()){
-            return Mono.error(new CustomException(ErrorCode.IMAGE_PROCESSING_ERROR));
-        }
-
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", file.getResource())
-                .filename(file.getOriginalFilename()); // 파일 이름 명시
+        if (file != null && !file.isEmpty()) {
+            builder.part("file", file.getResource()).filename(file.getOriginalFilename());
+        }
         builder.part("prompt", prompt);
 
         return webClient.post()
@@ -55,40 +52,42 @@ public class AiService {
                 .body(BodyInserters.fromMultipartData(builder.build()))
                 .retrieve()
                 .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
-                        clientResponse -> Mono.error(new CustomException(ErrorCode.AI_SERVER_ERROR)))
+                        clientResponse -> clientResponse.bodyToMono(String.class)
+                                .flatMap(errorBody -> {
+                                    log.error("AI 서버 에러 발생: {}", errorBody);
+                                    return Mono.error(new CustomException(ErrorCode.AI_SERVER_ERROR));
+                                }))
                 .bodyToMono(AiResponseDto.class)
                 .flatMap(response -> {
-                    // JPA 호출은 블로킹이므로 별도의 스레드에서 실행하도록 함
+                    log.info(">>> AI 서버로부터 응답 수신 완료. DB 저장 시작...");
                     return Mono.fromCallable(() -> {
-                        // 1. AI 응답 원문 가져오기
                         String fullResponse = response.aiResponse();
                         String description = fullResponse;
                         String quizJson = "";
 
-                        // 2. 파싱 로직: ###QUIZ### 태그를 기준으로 나눔
-                        if (fullResponse.contains("###QUIZ###")) {
+                        if (fullResponse != null && fullResponse.contains("###QUIZ###")) {
+                            log.info(">>> 퀴즈 태그 발견. 파싱 시작...");
                             String[] parts = fullResponse.split("###QUIZ###");
-                            description = parts[0].trim(); // AI의 설명 부분
-                            if (parts.length > 1) {
-                                quizJson = parts[1].trim(); // JSON 데이터 부분
-                            }
+                            description = parts.length > 0 ? parts[0].trim() : "";
+                            quizJson = parts.length > 1 ? parts[1].trim() : "";
+                        } else {
+                            log.warn(">>> 퀴즈 태그를 찾을 수 없습니다.");
                         }
 
-                        // 3. AiHistory 저장 (설명 텍스트만 저장)
+                        log.info(">>> AiHistory 저장을 시도합니다...");
                         AiHistory history = AiHistory.builder()
                                 .user(user)
                                 .userPrompt(prompt)
-                                .aiResponse(description)
+                                .aiResponse(description) // 설명 부분만 저장
                                 .imageUrl(response.filename())
                                 .build();
                         AiHistory savedHistory = aiHistoryRepository.save(history);
+                        log.info(">>> AiHistory 저장 성공. ID: {}", savedHistory.getId());
 
-                        // 4. 퀴즈가 있다면 Quiz 테이블에 저장
                         if (!quizJson.isEmpty()) {
+                            log.info(">>> 퀴즈 저장을 시도합니다. JSON: {}", quizJson);
                             try {
-                                // 아까 만든 AiQuizDto record 사용
                                 AiQuizDto quizDto = objectMapper.readValue(quizJson, AiQuizDto.class);
-
                                 Quiz quiz = Quiz.builder()
                                         .aiHistory(savedHistory)
                                         .question(quizDto.question())
@@ -96,11 +95,13 @@ public class AiService {
                                         .answer(quizDto.answer())
                                         .build();
                                 quizRepository.save(quiz);
+
+                                log.info(">>> Quiz 저장 성공. AiHistory ID: {}", savedHistory.getId());
                             } catch (Exception e) {
-                                // 퀴즈 파싱에 실패하더라도 전체 흐름이 깨지지 않게 로그만 남김
-                                log.error("Quiz JSON 파싱 에러: {}", e.getMessage());
+                                log.error("!!! Quiz JSON 파싱 또는 저장 중 에러 발생: {}", e.getMessage(), e);
                             }
                         }
+                        log.info(">>> DB 저장 프로세스 완료.");
                         return response;
                     }).subscribeOn(Schedulers.boundedElastic());
                 });
@@ -111,5 +112,4 @@ public class AiService {
                 .map(AiHistoryResponseDto::from)
                 .collect(Collectors.toList());
     }
-
 }
