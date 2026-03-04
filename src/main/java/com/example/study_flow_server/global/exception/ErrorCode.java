@@ -6,6 +6,8 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum ErrorCode {
 
+    PASSWORD_IS_INCORRECT(HttpStatus.BAD_REQUEST,"비밀번호가 틀렸습니다. 다시 입력해주세요"),
+
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다.!"),
 
     // 403

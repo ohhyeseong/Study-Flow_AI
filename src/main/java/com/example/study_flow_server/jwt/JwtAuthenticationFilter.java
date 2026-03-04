@@ -8,17 +8,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.filter.OncePerRequestFilter;
 import com.example.study_flow_server.global.security.CustomUserDetailsService;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-
 @Slf4j
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -26,47 +21,50 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
 
-    // 필터 적용을 제외할 경로 목록
-    private static final List<String> EXCLUDE_URLS = Arrays.asList(
-            "/api/users/signup",
-            "/api/auth/login",
-            "/error",
-            "/swagger-ui",
-            "/v3/api-docs"
-    );
-
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-        String path = request.getRequestURI();
-        return EXCLUDE_URLS.stream().anyMatch(path::startsWith);
-    }
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
 
-    @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        // 1. OPTIONS 요청은 필터를 타지 않고 즉시 다음으로 넘김 (CORS 관련)
+        if (request.getMethod().equals("OPTIONS")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         String token = jwtUtil.resolveToken(request);
 
-        if (token != null) {
-            if (!jwtUtil.validateToken(token)) {
-                log.error("Token Error");
-            } else {
+        try {
+            if (token != null && jwtUtil.validateToken(token)) {
                 Claims claims = jwtUtil.getUserInfoFromToken(token);
-                setAuthentication(claims.getSubject());
+                String username = claims.getSubject();
+
+                if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+                    // 🟢 핵심: 권한(Authorities)을 포함하여 인증 객체 생성
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+
+                    // 인증 정보에 요청 상세 설정 추가
+                    // authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    log.info("인증 성공: 사용자 {}, 권한 {}", username, userDetails.getAuthorities());
+                }
             }
+        } catch (Exception e) {
+            log.error("SecurityContext에 인증 정보를 설정할 수 없습니다: {}", e.getMessage());
         }
+
         filterChain.doFilter(request, response);
     }
 
-    public void setAuthentication(String username) {
-        SecurityContext context = SecurityContextHolder.createEmptyContext();
-        Authentication authentication = createAuthentication(username);
-        context.setAuthentication(authentication);
-
-        SecurityContextHolder.setContext(context);
-    }
-
-    public Authentication createAuthentication(String username) {
-        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-        return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+    // 🟢 특정 경로는 필터를 거치지 않도록 설정 (기존 로직 유지하되 명확하게)
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getRequestURI();
+        return path.startsWith("/api/users/signup") ||
+                path.startsWith("/api/auth/login") ||
+                path.startsWith("/error");
     }
 }

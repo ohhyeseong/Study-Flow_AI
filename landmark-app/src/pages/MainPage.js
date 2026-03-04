@@ -1,221 +1,236 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 function MainPage() {
-  const [currentPos, setCurrentPos] = useState({ lat: 36.9103, lon: 127.1332 });
-  const [mapObj, setMapObj] = useState(null);
-  const [aiResult, setAiResult] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [viewMode, setViewMode] = useState('ai');
+  const [chatHistory, setChatHistory] = useState([]);
   const [customPrompt, setCustomPrompt] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [mapObj, setMapObj] = useState(null);
 
-  const [savedLandmarks, setSavedLandmarks] = useState([]);
-  const [showSaved, setShowSaved] = useState(false);
-  const [markers, setMarkers] = useState([]);
-
-  // ✨ 추가: 리스트에서 클릭하여 선택된 장소 상태
-  const [selectedPlace, setSelectedPlace] = useState(null);
+  // 퀴즈 상태
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [currentQuiz, setCurrentQuiz] = useState(null);
+  const [userAnswer, setUserAnswer] = useState(null);
+  const [isCorrect, setIsCorrect] = useState(null);
 
   const navigate = useNavigate();
+  const chatEndRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
-    const container = document.getElementById('map');
-    const options = {
-      center: new window.kakao.maps.LatLng(currentPos.lat, currentPos.lon),
-      level: 3
-    };
-    const kakaoMap = new window.kakao.maps.Map(container, options);
-    setMapObj(kakaoMap);
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatHistory]);
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
-        const { latitude: lat, longitude: lon } = position.coords;
-        setCurrentPos({ lat, lon });
-        const myLoc = new window.kakao.maps.LatLng(lat, lon);
-        kakaoMap.setCenter(myLoc);
-        new window.kakao.maps.Marker({ map: kakaoMap, position: myLoc });
-      });
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token || token === "undefined") {
+      navigate('/login');
+    } else {
+      fetchChatHistory(token);
     }
-  }, []);
+  }, [navigate]);
 
-  const fetchAndShowSavedLandmarks = async () => {
+  const fetchChatHistory = async (token) => {
     try {
-      const response = await axios.get('http://localhost:8090/api/v1/landmarks');
-      const data = response.data;
-      setSavedLandmarks(data);
-      setShowSaved(true);
-
-      markers.forEach(m => m.setMap(null));
-
-      const newMarkers = data.map(place => {
-        const pos = new window.kakao.maps.LatLng(place.latitude, place.longitude);
-        const marker = new window.kakao.maps.Marker({
-          map: mapObj,
-          position: pos,
-          title: place.name
-        });
-
-        window.kakao.maps.event.addListener(marker, 'click', () => {
-          // 마커 클릭 시에도 상세 정보 표시
-          setSelectedPlace(place);
-          setAiResult(null);
-        });
-
-        return marker;
+      const cleanToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      const response = await axios.get('http://localhost:8090/api/ai/history', {
+        headers: { Authorization: cleanToken }
       });
-
-      setMarkers(newMarkers);
-    } catch (error) {
-      alert("저장된 장소를 가져오지 못했습니다.");
-    }
-  };
-
-  const handleAIRecommendation = () => {
-    if (isLoading) return;
-    const finalQuery = customPrompt.trim() || "주변 가볼만한 곳을 추천하고 각 장소의 특징을 설명해줘";
-    setAiResult(null);
-    setSelectedPlace(null); // AI 추천 시 기존 선택 장소 닫기
-    setIsLoading(true);
-    const ps = new window.kakao.maps.services.Places();
-    ps.keywordSearch('관광명소', async (data, status) => {
-      if (status === window.kakao.maps.services.Status.OK) {
-        const placeDetails = data.slice(0, 6).map(p =>
-          `- ${p.place_name} (주소: ${p.address_name}, 카테고리: ${p.category_name})`
-        ).join("\n");
-        try {
-          const response = await axios.post(`http://localhost:8090/api/v1/ai/recommend`, {
-            places: placeDetails,
-            userQuery: finalQuery + " (반드시 주소 정보를 포함해서 답변해줘)"
-          });
-          setAiResult(response.data.answer);
-        } catch (err) { alert("AI 서버 연결 실패!"); } finally { setIsLoading(false); }
+      setChatHistory(response.data);
+    } catch (err) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        localStorage.removeItem('token');
+        navigate('/login');
       }
-    }, { location: new window.kakao.maps.LatLng(currentPos.lat, currentPos.lon), radius: 2000 });
+    }
   };
 
-  // ✨ 길찾기 외부 링크 함수 업데이트 (장소 정보를 직접 받음)
-  const openRoute = (place) => {
-    const url = `https://map.kakao.com/link/to/${place.name},${place.latitude},${place.longitude}`;
-    window.open(url, '_blank');
-  };
-
-  const handleSaveLocation = async () => {
-    const name = prompt("저장할 장소의 이름을 입력하세요:");
-    if (!name) return;
-    const description = prompt("장소에 대한 설명을 입력하세요:", "설명 없음");
+  const parseQuiz = (text) => {
+    if (!text) return null;
     try {
-      await axios.post('http://localhost:8090/api/v1/landmarks/register', {
-        name, description, latitude: currentPos.lat, longitude: currentPos.lon, distance: 0.0
-      });
-      alert("✅ 위치 저장 완료!");
-      fetchAndShowSavedLandmarks();
-    } catch (error) { alert("❌ 저장 실패"); }
+      const quizMatch = text.match(/###QUIZ###\s*({.*})\s*###QUIZ###/s);
+      return quizMatch ? JSON.parse(quizMatch[1]) : null;
+    } catch (e) { return null; }
   };
 
-  const handleLogout = () => { localStorage.removeItem('token'); navigate('/login'); };
+  const handleAIChat = async () => {
+    if (!selectedFile || isLoading) {
+      alert("이미지를 선택하고 질문을 입력해주세요.");
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    const cleanToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+
+    // 전송 전 데이터 백업
+    const tempFile = selectedFile;
+    const tempPrompt = customPrompt;
+    const tempPreview = previewUrl;
+
+    // 1. 🟢 전송 즉시 UI 초기화
+    setCustomPrompt("");
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+
+    setChatHistory(prev => [...prev, { role: 'user', content: tempPrompt, image: tempPreview }]);
+    setIsLoading(true);
+
+    const formData = new FormData();
+    formData.append('file', tempFile);
+    formData.append('prompt', tempPrompt || "이 문제를 설명해줘.");
+
+    try {
+      const res = await axios.post(`http://localhost:8090/api/ai/analyze`, formData, {
+        headers: { Authorization: cleanToken, 'Content-Type': 'multipart/form-data' }
+      });
+
+      // 백엔드 로그 기반 키값 매칭
+      const aiContent = res.data.ai_response || res.data.aiResponse || res.data.content;
+      if (aiContent) {
+        setChatHistory(prev => [...prev, { role: 'ai', content: aiContent }]);
+      }
+    } catch (err) {
+      console.error("분석 실패 상세:", err);
+      if (err.response?.status === 403) {
+        alert("보안 정책(403)으로 응답을 읽을 수 없습니다. 로그아웃 후 다시 시도하거나 서버 CORS 설정을 확인하세요.");
+      } else {
+        alert("AI 분석 중 오류가 발생했습니다.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
-      <div style={navBarStyle}>
-          <div style={{ fontWeight: 'bold', fontSize: '18px' }}>Jangmin Map</div>
-          <div style={{ display: 'flex', gap: '15px' }}>
-              <Link to="/board" style={navLinkStyle}>📋 게시판</Link>
-              <Link to="/chat" style={navLinkStyle}>💬 채팅방</Link>
-              <button onClick={handleLogout} style={logoutButtonStyle}>로그아웃</button>
-          </div>
-      </div>
-
-      <div style={aiInputAreaStyle}>
-        <input
-          type="text"
-          placeholder="어떤 장소를 찾으시나요?"
-          value={customPrompt}
-          onChange={(e) => setCustomPrompt(e.target.value)}
-          style={inputStyle}
-          onKeyDown={(e) => e.key === 'Enter' && handleAIRecommendation()}
-        />
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-          <button onClick={handleAIRecommendation} style={buttonStyle("#4285F4", "white")}>
-            {isLoading ? "🤖 분석 중..." : "✨ AI 추천받기"}
-          </button>
-          <button onClick={handleSaveLocation} style={buttonStyle("#fee500", "black")}>
-            📍 내 위치 저장
-          </button>
-          <button onClick={fetchAndShowSavedLandmarks} style={buttonStyle("#34a853", "white")}>
-            📚 저장 목록
-          </button>
+    <div style={styles.layout}>
+      {/* 상단바 */}
+      <div style={styles.navBar}>
+        <div style={styles.logo}>StudyFlow AI</div>
+        <div style={styles.navRight}>
+          <button onClick={() => setViewMode('ai')} style={styles.tabBtn(viewMode === 'ai')}>💬 AI 채팅</button>
+          <button onClick={() => setViewMode('map')} style={styles.tabBtn(viewMode === 'map')}>🗺️ 스터디 맵</button>
+          <button onClick={() => { localStorage.removeItem('token'); navigate('/login'); }} style={styles.logoutBtn}>로그아웃</button>
         </div>
       </div>
 
-      {showSaved && (
-        <div style={sidebarStyle}>
-          <div style={{display:'flex', justifyContent:'space-between', marginBottom:'10px'}}>
-            <strong style={{fontSize:'16px'}}>내 저장 목록</strong>
-            <button onClick={()=>setShowSaved(false)} style={{border:'none', background:'none', cursor:'pointer'}}>X</button>
-          </div>
-          <div style={{overflowY:'auto', maxHeight:'80vh'}}>
-            {savedLandmarks.length === 0 ? <p style={{fontSize:'12px'}}>저장된 장소가 없습니다.</p> :
-              savedLandmarks.map(place => (
-                <div key={place.id} style={listItemStyle} onClick={() => {
-                  mapObj.panTo(new window.kakao.maps.LatLng(place.latitude, place.longitude));
-                  setSelectedPlace(place); // ✨ 클릭 시 장소 정보 저장
-                  setAiResult(null); // AI 창 닫기
-                }}>
-                  <div style={{fontWeight:'bold', fontSize:'14px'}}>{place.name}</div>
-                  <div style={{fontSize:'12px', color:'#666'}}>{place.description}</div>
-                </div>
-              ))
-            }
-          </div>
-        </div>
-      )}
+      <div style={styles.content}>
+        {viewMode === 'ai' && (
+          <div style={styles.chatWrapper}>
+            <div style={styles.chatBox}>
+              {chatHistory.map((chat, i) => {
+                const rawContent = chat.content || chat.ai_response || chat.aiResponse;
+                const quizData = parseQuiz(rawContent);
+                return (
+                  <div key={i} style={styles.chatRow(chat.role || (chat.userId ? 'ai' : 'user'))}>
+                    <div style={styles.bubble(chat.role || (chat.userId ? 'ai' : 'user'))}>
+                      {chat.image && <img src={chat.image} alt="upload" style={styles.image} />}
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {rawContent?.replace(/###QUIZ###.*###QUIZ###/s, '')}
+                      </ReactMarkdown>
+                      {quizData && (
+                        <button
+                          onClick={() => { setCurrentQuiz(quizData); setShowQuiz(true); setIsCorrect(null); setUserAnswer(null); }}
+                          style={styles.quizOpenBtn}
+                        >
+                          📝 관련 퀴즈 풀기
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={chatEndRef} />
+            </div>
 
-      {/* ✨ 추가: 저장된 장소 클릭 시 나타나는 정보 카드 */}
-      {selectedPlace && (
-        <div style={resultCardStyle}>
-          <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px', color: '#34a853' }}>📍 저장된 장소 정보</div>
-          <div style={{ marginBottom: '10px' }}>
-            <div style={{ fontSize: '15px', fontWeight: 'bold' }}>{selectedPlace.name}</div>
-            <div style={{ fontSize: '13px', color: '#666' }}>{selectedPlace.description}</div>
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={() => openRoute(selectedPlace)} style={actionButtonStyle("#fee500", "#333")}>
-               🚗 길찾기 시작
-            </button>
-            <button onClick={() => window.open(`https://map.kakao.com/link/search/${encodeURIComponent(selectedPlace.name)}`, '_blank')} style={actionButtonStyle("#eee", "#333")}>
-               🔍 상세검색
-            </button>
-          </div>
-          <button onClick={() => setSelectedPlace(null)} style={closeButtonStyle}>닫기</button>
-        </div>
-      )}
+            {previewUrl && (
+              <div style={styles.previewContainer}>
+                <img src={previewUrl} alt="preview" style={styles.smallPreview} />
+                <button onClick={() => {setSelectedFile(null); setPreviewUrl(null);}} style={styles.previewClose}>×</button>
+              </div>
+            )}
 
-      {aiResult && (
-        <div style={resultCardStyle}>
-          <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px', color: '#4285F4' }}>🤖 AI 가이드 추천</div>
-          <div style={{ fontSize: '14px', lineHeight: '1.6', maxHeight: '200px', overflowY: 'auto', marginBottom: '15px', color: '#333' }}>
-            {aiResult}
+            <div style={styles.inputArea}>
+              <input type="file" ref={fileInputRef} onChange={(e) => {
+                const file = e.target.files[0];
+                if(file) { setSelectedFile(file); setPreviewUrl(URL.createObjectURL(file)); }
+              }} style={{display:'none'}} />
+              <button onClick={() => fileInputRef.current.click()} style={styles.iconBtn}>📎</button>
+              <input style={styles.input} value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !isLoading && handleAIChat()} placeholder="질문을 입력하세요..." />
+              <button onClick={handleAIChat} style={styles.sendBtn} disabled={isLoading}>{isLoading ? "..." : "전송"}</button>
+            </div>
           </div>
-          <button onClick={() => setAiResult(null)} style={closeButtonStyle}>닫기</button>
-        </div>
-      )}
+        )}
 
-      <div id="map" style={{ width: '100%', height: '100%' }}></div>
+        {/* 퀴즈 모달 */}
+        {showQuiz && currentQuiz && (
+          <div style={styles.modalOverlay}>
+            <div style={styles.modalContent}>
+              <h3 style={{color: '#4285F4'}}>🎯 AI 학습 퀴즈</h3>
+              <p style={{fontWeight:'bold', fontSize:'17px', margin:'20px 0'}}>{currentQuiz.question}</p>
+              <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
+                {currentQuiz.options.map((opt, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => { setUserAnswer(opt); setIsCorrect(opt === currentQuiz.answer); }}
+                    style={styles.optionBtn(userAnswer === opt, isCorrect, opt === currentQuiz.answer)}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+              {isCorrect !== null && (
+                <p style={{marginTop:'15px', color: isCorrect ? '#28a745' : '#dc3545', fontWeight:'bold'}}>
+                  {isCorrect ? "정답입니다! 👏" : `틀렸습니다. 정답: ${currentQuiz.answer}`}
+                </p>
+              )}
+              <button onClick={() => setShowQuiz(false)} style={styles.modalCloseBtn}>닫기</button>
+            </div>
+          </div>
+        )}
+
+        <div id="map" style={{ width: '100%', height: '100%', display: viewMode === 'map' ? 'block' : 'none' }}></div>
+      </div>
     </div>
   );
 }
 
-// ... 스타일은 기존과 동일 ...
-const actionButtonStyle = (bg, color) => ({ flex: 1, padding: '10px', backgroundColor: bg, color: color, border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' });
-const navBarStyle = { position: 'absolute', top: 0, left: 0, width: '100%', height: '60px', backgroundColor: 'white', zIndex: 1000, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', boxSizing: 'border-box' };
-const navLinkStyle = { textDecoration: 'none', color: '#333', fontWeight: 'bold' };
-const logoutButtonStyle = { padding: '8px 12px', backgroundColor: '#ff4d4f', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' };
-const aiInputAreaStyle = { position: 'absolute', top: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 100, display: 'flex', flexDirection: 'column', gap: '10px', width: '90%', maxWidth: '600px' };
-const inputStyle = { padding: '15px 20px', borderRadius: '30px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.2)', outline: 'none' };
-const buttonStyle = (bg, color) => ({ padding: '10px 15px', backgroundColor: bg, color: color, border: 'none', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize:'13px' });
-const resultCardStyle = { position: 'absolute', bottom: '30px', left: '50%', transform: 'translateX(-50%)', zIndex: 101, width: '90%', maxWidth: '450px', padding: '20px', backgroundColor: 'white', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' };
-const sidebarStyle = { position: 'absolute', top: '150px', right: '20px', zIndex: 1001, width: '250px', backgroundColor: 'white', borderRadius: '15px', padding: '15px', boxShadow: '0 4px 15px rgba(0,0,0,0.2)', maxHeight: '70vh' };
-const listItemStyle = { padding: '10px', borderBottom: '1px solid #eee', cursor: 'pointer', transition: 'background 0.2s', borderRadius: '8px' };
-const closeButtonStyle = { marginTop: '10px', width: '100%', padding: '8px', border: 'none', borderRadius: '10px', cursor: 'pointer', color: '#999', fontSize: '12px' };
+const styles = {
+  layout: { width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f5f7fb' },
+  navBar: { display: 'flex', justifyContent: 'space-between', padding: '15px 40px', backgroundColor: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', zIndex: 100 },
+  logo: { fontSize: '22px', fontWeight: 'bold', color: '#4285F4' },
+  navRight: { display: 'flex', gap: '15px' },
+  content: { flex: 1, position: 'relative', overflow: 'hidden' },
+  chatWrapper: { display: 'flex', flexDirection: 'column', height: '100%', maxWidth: '850px', margin: '0 auto', padding: '20px' },
+  chatBox: { flex: 1, overflowY: 'auto', padding: '20px', backgroundColor: '#fff', borderRadius: '20px', border: '1px solid #eef2f6', marginBottom: '10px' },
+  chatRow: (role) => ({ display: 'flex', justifyContent: role === 'user' ? 'flex-end' : 'flex-start', marginBottom: '15px' }),
+  bubble: (role) => ({ padding: '12px 18px', borderRadius: '18px', maxWidth: '80%', backgroundColor: role === 'user' ? '#4285F4' : '#f1f3f5', color: role === 'user' ? '#fff' : '#333' }),
+  quizOpenBtn: { marginTop: '10px', padding: '8px 12px', backgroundColor: '#fff', border: '1px solid #4285F4', color: '#4285F4', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
+  inputArea: { display: 'flex', gap: '10px', backgroundColor: '#fff', padding: '10px 20px', borderRadius: '35px', boxShadow: '0 4px 15px rgba(0,0,0,0.08)' },
+  input: { flex: 1, border: 'none', outline: 'none' },
+  sendBtn: { padding: '8px 20px', backgroundColor: '#4285F4', color: '#fff', border: 'none', borderRadius: '20px', cursor: 'pointer' },
+  previewContainer: { position: 'relative', width: '60px', height: '60px', marginBottom: '10px', marginLeft: '10px' },
+  smallPreview: { width: '100%', height: '100%', borderRadius: '8px', objectFit: 'cover', border: '2px solid #4285F4' },
+  previewClose: { position: 'absolute', top: '-5px', right: '-5px', backgroundColor: '#ff4d4f', color: '#fff', border: 'none', borderRadius: '50%', width: '18px', height: '18px', fontSize: '12px', cursor: 'pointer' },
+  tabBtn: (active) => ({ padding: '10px 15px', backgroundColor: active ? '#4285F4' : 'transparent', color: active ? '#fff' : '#555', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' }),
+  logoutBtn: { padding: '8px 15px', backgroundColor: '#ff4d4f', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' },
+  image: { maxWidth: '100%', borderRadius: '10px', marginBottom: '10px' },
+  iconBtn: { background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' },
+  // 모달 스타일
+  modalOverlay: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
+  modalContent: { backgroundColor: '#fff', padding: '30px', borderRadius: '20px', width: '400px', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' },
+  optionBtn: (isSelected, isCorrect, isAnswer) => ({
+    padding: '12px', borderRadius: '10px', border: '1px solid #ddd', cursor: 'pointer',
+    backgroundColor: isSelected ? (isCorrect ? '#d4edda' : '#f8d7da') : (isCorrect !== null && isAnswer ? '#d4edda' : '#fff'),
+    borderColor: isSelected ? (isCorrect ? '#28a745' : '#dc3545') : '#ddd'
+  }),
+  modalCloseBtn: { marginTop: '20px', padding: '8px 20px', backgroundColor: '#6c757d', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer' }
+};
 
 export default MainPage;

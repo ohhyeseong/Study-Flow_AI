@@ -2,9 +2,13 @@ package com.example.study_flow_server.user.controller;
 
 import com.example.study_flow_server.jwt.TokenResponseDto;
 import com.example.study_flow_server.user.dto.LoginRequestDto;
+import com.example.study_flow_server.user.dto.UserCreateDto;
 import com.example.study_flow_server.user.service.AuthService;
 import com.example.study_flow_server.user.service.EmailService; // EmailService 주입 필요
+import com.example.study_flow_server.user.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,13 +17,20 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthService authService;
+    private final UserService userService;
     private final EmailService emailService; // 이메일 서비스 추가
+
+    // 회원가입
+    @PostMapping("/signup")
+    public ResponseEntity<String> register(@Valid @RequestBody UserCreateDto userCreateDto) {
+        userService.register(userCreateDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body("회원가입이 완료되었습니다.");
+    }
 
     // 1. 로그인
     @PostMapping("/login")
     public ResponseEntity<TokenResponseDto> login(@RequestBody LoginRequestDto loginRequestDto) {
-        TokenResponseDto tokenResponseDto = authService.login(loginRequestDto);
+        TokenResponseDto tokenResponseDto = userService.login(loginRequestDto);
         return ResponseEntity.ok(tokenResponseDto);
     }
 
@@ -27,7 +38,7 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<String> logout(@RequestHeader("Authorization") String accessToken) {
         String token = accessToken.substring(7);
-        authService.logout(token);
+        userService.logout(token);
         return ResponseEntity.ok("로그아웃 성공");
     }
 
@@ -36,7 +47,7 @@ public class AuthController {
     @PostMapping("/reissue")
     public ResponseEntity<TokenResponseDto> reissue(@RequestHeader("Authorization") String refreshToken) {
         String token = refreshToken.substring(7);
-        TokenResponseDto tokenResponseDto = authService.reissue(token);
+        TokenResponseDto tokenResponseDto = userService.reissue(token);
         return ResponseEntity.ok(tokenResponseDto);
     }
 
