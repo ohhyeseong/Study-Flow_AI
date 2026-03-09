@@ -16,7 +16,7 @@ import java.util.Map;
 public class MapAiController {
 
     // 🟢 Groq Cloud에서 발급받은 API 키 (https://console.groq.com/keys)
-    private final String GROQ_API_KEY = "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";
+    private final String GROQ_API_KEY = "api";
     private final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
     @PostMapping("/recommend")
@@ -25,7 +25,7 @@ public class MapAiController {
         String places = (String) request.get("places");   // 카카오맵에서 긁어온 주변 장소들
 
         // AI에게 역할 부여 및 데이터 전달
-        String systemRole = "너는 친절한 로컬 여행 가이드야. 아래 제공된 장소 리스트를 바탕으로 사용자의 질문에 답해줘. "
+        String systemRole = "너는 친절한 학원강사야. 질문에 대하여 친절하게 대답해줘. "
                 + "주변 장소들: [" + places + "]";
 
         RestTemplate restTemplate = new RestTemplate();

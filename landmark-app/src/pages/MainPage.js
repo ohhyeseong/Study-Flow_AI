@@ -115,7 +115,7 @@ function MainPage() {
         <div style={styles.logo}>StudyFlow AI</div>
         <div style={styles.navRight}>
           <button onClick={() => setViewMode('ai')} style={styles.tabBtn(viewMode === 'ai')}>💬 AI 채팅</button>
-          <button onClick={() => setViewMode('map')} style={styles.tabBtn(viewMode === 'map')}>🗺️ 스터디 맵</button>
+          <button onClick={() => navigate('/map')} style={styles.tabBtn(false)} >🗺️ 스터디 맵</button>
           <button onClick={() => { localStorage.removeItem('token'); navigate('/login'); }} style={styles.logoutBtn}>로그아웃</button>
         </div>
       </div>
