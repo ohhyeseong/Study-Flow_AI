@@ -19,7 +19,7 @@ app = FastAPI()
 # CORS 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -28,7 +28,7 @@ app.add_middleware(
 # 1. API 키 설정
 api_key = os.environ.get("ANTHROPIC_API_KEY")
 if not api_key:
-    print("Warning: ANTHROPIC_API_KEY environment variable not set. Please check your .env file.")
+    print("Warning: 현재 실존하지 않는 API키 입니다. 다시 확인해주세요.")
 
 # 2. Claude 클라이언트 초기화
 client = anthropic.Anthropic(api_key=api_key)

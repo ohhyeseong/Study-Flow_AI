@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import axios from 'axios';
+import apiClient from '../api';
 import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -39,7 +39,7 @@ function MainPage() {
   const fetchChatHistory = async (token) => {
     try {
       const cleanToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-      const response = await axios.get('http://localhost:8090/api/ai/history', {
+      const response = await apiClient.get('/api/ai/history', {
         headers: { Authorization: cleanToken }
       });
       setChatHistory(response.data);
@@ -87,8 +87,8 @@ function MainPage() {
     formData.append('prompt', tempPrompt || "이 문제를 설명해줘.");
 
     try {
-      const res = await axios.post(`http://localhost:8090/api/ai/analyze`, formData, {
-        headers: { Authorization: cleanToken, 'Content-Type': 'multipart/form-data' }
+      const res = await apiClient.post(`/api/ai/analyze`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
 
       // 백엔드 로그 기반 키값 매칭

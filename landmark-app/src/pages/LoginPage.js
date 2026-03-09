@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import apiClient from '../api';
 
 const LoginPage = () => {
     const [username, setUsername] = useState('');
@@ -12,7 +12,7 @@ const LoginPage = () => {
 
         try {
             // 1. 백엔드 로그인 API 호출
-            const response = await axios.post('http://localhost:8090/api/auth/login', {
+            const response = await apiClient.post('/api/auth/login', {
                 username: username,
                 password: password,
             });

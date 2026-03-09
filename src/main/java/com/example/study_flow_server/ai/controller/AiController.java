@@ -35,14 +35,14 @@ public class AiController {
     private final QuizResultRepository quizResultRepository;
 
     @PostMapping(value = "/analyze", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public Mono<AiResponseDto> analyzeImage(
+    public AiResponseDto analyzeImage(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestPart("file") MultipartFile file,
             @RequestPart("prompt") String prompt
     ) {
         if (userDetails == null) {
             log.error("인증된 사용자 정보가 없습니다. (userDetails is null)");
-            return Mono.error(new CustomException(ErrorCode.UNAUTHORIZED));
+            throw  new CustomException(ErrorCode.UNAUTHORIZED);
         }
         log.info("AI 분석 요청 - 사용자: {}, 파일: {}, 프롬프트: {}", userDetails.getUsername(), file.getOriginalFilename(), prompt);
         return aiService.analyzeImage(userDetails.getUser(), file, prompt);

@@ -47,6 +47,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**", "/api/users/signup", "/api/v1/landmarks/**").permitAll()
+//                        .requestMatchers("/api/ai/**").permitAll()
                         .requestMatchers("/api/ai/**").authenticated() // 혹은 .authenticated()
                         .anyRequest().authenticated()
                 )

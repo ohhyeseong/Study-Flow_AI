@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import apiClient from '../api';
 
 const SignUpPage = () => {
     const [username, setUsername] = useState('');
@@ -23,7 +23,7 @@ const SignUpPage = () => {
         }
         try {
             // 백엔드 API 호출 (POST /api/auth/email-send?email=...)
-            await axios.post(`http://localhost:8090/api/auth/email-send?email=${email}`);
+            await apiClient.post(`/api/auth/email-send?email=${email}`);
             alert("인증번호가 이메일로 전송되었습니다. 확인해주세요.");
             setIsEmailSent(true);
         } catch (error) {
@@ -40,7 +40,7 @@ const SignUpPage = () => {
         }
         try {
             // 백엔드 API 호출 (POST /api/auth/email-verify?email=...&code=...)
-            await axios.post(`http://localhost:8090/api/auth/email-verify?email=${email}&code=${verificationCode}`);
+            await apiClient.post(`http://localhost:8090/api/auth/email-verify?email=${email}&code=${verificationCode}`);
             alert("이메일 인증이 완료되었습니다!");
             setIsEmailVerified(true);
         } catch (error) {
@@ -69,7 +69,7 @@ const SignUpPage = () => {
         }
 
         try {
-            const response = await axios.post('http://localhost:8090/api/users/signup', {
+            const response = await apiClient.post('http://localhost:8090/api/auth/signup', {
                 username: username,
                 password: password,
                 nickname: nickname,
