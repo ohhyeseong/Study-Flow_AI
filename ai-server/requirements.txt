@@ -11,3 +11,4 @@ pypdf
 openai-whisper
 python-dotenv
 anthropic
+pydantic-settings

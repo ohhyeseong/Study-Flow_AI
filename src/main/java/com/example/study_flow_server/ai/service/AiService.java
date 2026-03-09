@@ -50,7 +50,7 @@ public class AiService {
 
         // 1. WebClient 요청 후 결과를 block()으로 기다림
         String rawJson = webClient.post()
-                .uri("/analyze-image")
+                .uri("/api/v1/analyze-image")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(BodyInserters.fromMultipartData(builder.build()))
                 .retrieve()
@@ -75,7 +75,7 @@ public class AiService {
     }
 
     public List<AiHistoryResponseDto> getHistoryList(Long userId) {
-        return aiHistoryRepository.findAllByUserIdOrderByCreatedAtDesc(userId).stream()
+        return aiHistoryRepository.findAllByUserIdOrderByCreatedAtAsc(userId).stream()
                 .map(AiHistoryResponseDto::from)
                 .collect(Collectors.toList());
     }

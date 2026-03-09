@@ -24,6 +24,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 
+@CrossOrigin(origins = "http://localhost:3000")
 @RestController
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
@@ -37,7 +38,7 @@ public class AiController {
     @PostMapping(value = "/analyze", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public AiResponseDto analyzeImage(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestPart("file") MultipartFile file,
+            @RequestPart(value = "file", required = false) MultipartFile file,
             @RequestPart("prompt") String prompt
     ) {
         if (userDetails == null) {
