@@ -48,28 +48,28 @@ public class AiService {
         }
         builder.part("prompt", prompt);
 
-        // 1. WebClient 요청 후 결과를 block()으로 기다림
-        String rawJson = webClient.post()
-                .uri("/api/v1/analyze-image")
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .body(BodyInserters.fromMultipartData(builder.build()))
-                .retrieve()
-                .bodyToMono(String.class)
-                .block(); // 🟢 여기서 비동기 응답이 올 때까지 대기합니다.
-
-        log.info(">>>> [2] AI 서버로부터 받은 원본 JSON: {}", rawJson);
-
         try {
-            // 2. JSON 파싱
-            AiResponseDto response = objectMapper.readValue(rawJson, AiResponseDto.class);
-            log.info(">>>> [3] JSON 변환 성공! 파일명: {}", response.filename());
+            // 1. WebClient 요청 후 결과를 block()으로 기다림
+            AiResponseDto response = webClient.post()
+                    .uri("/api/v1/analyze-image")
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData(builder.build()))
+                    .retrieve()
+                    //String 대신 AiResponseDto.class를 지정하여 자동 변환을 지시한다.
+                    .bodyToMono(AiResponseDto.class)
+                    //응답이 올 때까지 대기하고, 만약 응답이 비어있으면 예외를 발생시킨다.
+                    .blockOptional()
+                    .orElseThrow(() -> new CustomException(ErrorCode.AI_SERVER_ERROR));
 
-            // 3. DB 저장 (Transactional 내에서 실행)
+            log.info(">>>> [2] AI 서버로부터 받은 원본 JSON: {}", response);
+
+            // 2. DB 저장 (Transactional 내에서 실행)
             aiDatabaseService.saveAnalysisResult(user, prompt, response);
 
             return response;
-        } catch (Exception e) {
-            log.error(">>>> [ERROR] JSON 파싱 또는 DB 저장 중 사고 발생: {}", e.getMessage());
+        } catch (Exception e) {// WebClient 에러 또는 DB 저장 에러를 여기서 잡는다.
+            log.error(">>>> [ERROR] AI 서버 통신 또는 DB 저장 중 사고 발생: {}", e.getMessage());
+            //  추후 WebClient 관련 예외를 따로 분리하여 더 상세한 에러 처리가 가능하다.
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
