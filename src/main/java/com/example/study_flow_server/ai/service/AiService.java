@@ -35,7 +35,6 @@ public class AiService {
     private final WebClient webClient;
     private final AiHistoryRepository aiHistoryRepository;
     private final QuizRepository quizRepository;
-    private final ObjectMapper objectMapper;
     private final AiDatabaseService aiDatabaseService;
 
     @Transactional
