@@ -36,6 +36,7 @@ public class CommentService {
                 .orElseThrow(() -> new IllegalArgumentException("해당 사용자가 존재하지 않습니다. id=" + userId));
 
         Comment parent = null;
+        
         if (createDto.parentId() != null) {
             parent = commentRepository.findById(createDto.parentId())
                     .orElseThrow(() -> new IllegalArgumentException("부모 댓글이 존재하지 않습니다. id=" + createDto.parentId()));
@@ -48,9 +49,9 @@ public class CommentService {
                 .parent(parent)
                 .build();
 
-        commentRepository.save(comment);
+        Comment response = commentRepository.save(comment);
 
-        return CommentResponseDto.from(comment);
+        return CommentResponseDto.from(response);
     }
 
     /**
