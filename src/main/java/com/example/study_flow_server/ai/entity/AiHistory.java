@@ -38,11 +38,18 @@ public class AiHistory extends BaseEntity {
     private User user;
 
     @Builder
-    public AiHistory(String userPrompt, String aiResponse, String imageUrl,Quiz quiz,User user) {
+    public AiHistory(Long id,String userPrompt, String aiResponse, String imageUrl,Quiz quiz,User user) {
+        this.id = id;
         this.userPrompt = userPrompt;
         this.aiResponse = aiResponse;
         this.imageUrl = imageUrl;
         this.quiz = quiz;
         this.user = user;
     }
+
+    // AiServiceTest 목적용
+    public void setCreatedAt(LocalDateTime createdAt) {
+        super.setCreatedAt(createdAt);
+    }
+
 }

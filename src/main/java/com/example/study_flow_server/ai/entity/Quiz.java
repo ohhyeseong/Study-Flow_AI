@@ -33,7 +33,8 @@ public class Quiz {
     private String answer;
 
     @Builder
-    public Quiz(AiHistory aiHistory, String question, List<String> options, String answer) {
+    public Quiz(Long id,AiHistory aiHistory, String question, List<String> options, String answer) {
+        this.id = id;
         this.aiHistory = aiHistory;
         this.question = question;
         this.options = options;
