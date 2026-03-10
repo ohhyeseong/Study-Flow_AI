@@ -24,9 +24,6 @@ public class CommentService {
     private final PostRepository postRepository;
     private final UserRepository userRepository;
 
-    /**
-     * 댓글 작성 (대댓글 포함)
-     */
     @Transactional
     public CommentResponseDto createComment(Long postId, Long userId, CommentCreateDto createDto) {
         Post post = postRepository.findById(postId)
@@ -53,9 +50,6 @@ public class CommentService {
         return CommentResponseDto.from(comment);
     }
 
-    /**
-     * 특정 게시글의 댓글 조회 (계층형 구조)
-     */
     public List<CommentResponseDto> getCommentsByPost(Long postId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 존재하지 않습니다. id=" + postId));
@@ -68,22 +62,16 @@ public class CommentService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * 댓글 수정
-     */
     @Transactional
     public CommentResponseDto updateComment(Long commentId, String content) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 댓글이 존재하지 않습니다. id=" + commentId));
 
-        comment.update(content); // 도메인 메서드 활용 (더티 체킹)
+        comment.update(content);
 
         return CommentResponseDto.from(comment);
     }
 
-    /**
-     * 댓글 삭제
-     */
     @Transactional
     public void deleteComment(Long commentId) {
         Comment comment = commentRepository.findById(commentId)

@@ -19,21 +19,14 @@ public class UserController {
 
     private final UserService userService;
 
-    // 로그인(/api/users/login)과 로그아웃(/api/users/logout)은 SecurityConfig에서 처리합니다.
-
-    // 사용자 조회 (로그인된 사용자만 가능)
     @GetMapping("/find")
     public ResponseEntity<UserResponseDto> getMyInfo(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
-        if (customUserDetails == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
 
         User user = customUserDetails.getUser();
 
-        // User 엔티티를 UserResponseDto로 변환
         UserResponseDto responseDto = new UserResponseDto(
                 user.getId(),
-                null, // 비밀번호는 보안상 null 처리하거나 제외
+                null,
                 user.getUsername(),
                 user.getNickname(),
                 user.getEmail()

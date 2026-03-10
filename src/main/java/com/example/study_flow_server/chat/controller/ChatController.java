@@ -22,11 +22,7 @@ public class ChatController {
     private final ChatService chatService;
     private final SimpMessagingTemplate messagingTemplate;
 
-    // --- HTTP API (방 관리) ---
-
-    /**
-     * 채팅방 생성
-     */
+    // 채팅방 생성
     @PostMapping("/api/chat/rooms")
     public ResponseEntity<ChatRoomDto> createRoom(
             @RequestBody String title,
@@ -37,17 +33,13 @@ public class ChatController {
         return ResponseEntity.ok(room);
     }
 
-    /**
-     * 채팅방 목록 조회
-     */
+    // 채팅방 조회
     @GetMapping("/api/chat/rooms")
     public ResponseEntity<List<ChatRoomDto>> getAllRooms() {
         return ResponseEntity.ok(chatService.getAllRooms());
     }
 
-    /**
-     * 채팅방 입장 (멤버 등록)
-     */
+    // 채팅방 입장
     @PostMapping("/api/chat/rooms/{roomId}/enter")
     public ResponseEntity<Void> enterRoom(
             @PathVariable Long roomId,

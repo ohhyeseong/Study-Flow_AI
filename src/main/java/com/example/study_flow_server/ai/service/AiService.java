@@ -3,10 +3,13 @@ package com.example.study_flow_server.ai.service;
 import com.example.study_flow_server.ai.dto.AiHistoryResponseDto;
 import com.example.study_flow_server.ai.dto.AiQuizDto;
 import com.example.study_flow_server.ai.dto.AiResponseDto;
+import com.example.study_flow_server.ai.dto.WrongNoteResponse;
 import com.example.study_flow_server.ai.entity.AiHistory;
 import com.example.study_flow_server.ai.entity.Quiz;
+import com.example.study_flow_server.ai.entity.SolveStatus;
 import com.example.study_flow_server.ai.repository.AiHistoryRepository;
 import com.example.study_flow_server.ai.repository.QuizRepository;
+import com.example.study_flow_server.ai.repository.QuizResultRepository;
 import com.example.study_flow_server.global.exception.CustomException;
 import com.example.study_flow_server.global.exception.ErrorCode;
 import com.example.study_flow_server.user.domain.User;
@@ -37,6 +40,7 @@ public class AiService {
     private final AiHistoryRepository aiHistoryRepository;
     private final QuizRepository quizRepository;
     private final AiDatabaseService aiDatabaseService;
+    private final QuizResultRepository quizResultRepository;
 
     @Transactional
     public AiResponseDto analyzeImage(User user, MultipartFile file, String prompt) {
@@ -85,6 +89,14 @@ public class AiService {
     public List<AiHistoryResponseDto> getHistoryList(Long userId) {
         return aiHistoryRepository.findAllByUserIdOrderByCreatedAtAsc(userId).stream()
                 .map(AiHistoryResponseDto::from)
+                .collect(Collectors.toList());
+    }
+
+    public List<WrongNoteResponse> getWrongNotes(Long userId) {
+        return quizResultRepository
+                .findAllByUserIdAndStatusOrderByCreatedAtDesc(userId, SolveStatus.WRONG)
+                .stream()
+                .map(WrongNoteResponse::from)
                 .collect(Collectors.toList());
     }
 }

@@ -13,6 +13,7 @@ import com.example.study_flow_server.global.exception.CustomException;
 import com.example.study_flow_server.global.exception.ErrorCode;
 import com.example.study_flow_server.global.security.CustomUserDetails;
 import com.example.study_flow_server.user.domain.User;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -33,7 +34,6 @@ public class AiController {
 
     private final AiService aiService;
     private final QuizService quizService;
-    private final QuizResultRepository quizResultRepository;
 
     @PostMapping(value = "/analyze", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public AiResponseDto analyzeImage(
@@ -41,10 +41,6 @@ public class AiController {
             @RequestPart(value = "file", required = false) MultipartFile file,
             @RequestPart("prompt") String prompt
     ) {
-        if (userDetails == null) {
-            log.error("인증된 사용자 정보가 없습니다. (userDetails is null)");
-            throw  new CustomException(ErrorCode.UNAUTHORIZED);
-        }
         log.info("AI 분석 요청 - 사용자: {}, 파일: {}, 프롬프트: {}", userDetails.getUsername(), file.getOriginalFilename(), prompt);
         return aiService.analyzeImage(userDetails.getUser(), file, prompt);
     }
@@ -53,20 +49,14 @@ public class AiController {
     public List<AiHistoryResponseDto> getHistoryList(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        if (userDetails == null) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED);
-        }
         return aiService.getHistoryList(userDetails.getUser().getId());
     }
 
     @PostMapping("/quiz/submit")
     public ResponseEntity<List<AiHistoryResponseDto>> submitAnswer(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody QuizSubmitRequest request
+            @Valid @RequestBody QuizSubmitRequest request
     ) {
-        if (userDetails == null) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED);
-        }
         User user = userDetails.getUser();
 
         quizService.submitAnswer(userDetails.getUser(), request);
@@ -78,18 +68,7 @@ public class AiController {
     public ResponseEntity<List<WrongNoteResponse>> getWrongNotes(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        if (userDetails == null) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED);
-        }
-        User user = userDetails.getUser();
-
-        List<QuizResult> results = quizResultRepository
-                .findAllByUserIdAndStatusOrderByCreatedAtDesc(user.getId(), SolveStatus.WRONG);
-
-        List<WrongNoteResponse> responses = results.stream()
-                .map(WrongNoteResponse::from)
-                .toList();
-
-        return ResponseEntity.ok(responses);
+        List<WrongNoteResponse> wrongNotes = aiService.getWrongNotes(userDetails.getUser().getId());
+        return ResponseEntity.ok(wrongNotes);
     }
 }

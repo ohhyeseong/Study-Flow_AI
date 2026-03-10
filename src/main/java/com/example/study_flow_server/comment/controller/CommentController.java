@@ -18,9 +18,6 @@ public class CommentController {
 
     private final CommentService commentService;
 
-    /**
-     * 댓글 작성 (대댓글 포함)
-     */
     @PostMapping
     public ResponseEntity<CommentResponseDto> createComment(
             @PathVariable Long postId,
@@ -33,18 +30,12 @@ public class CommentController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * 특정 게시글의 모든 댓글 조회 (계층형)
-     */
     @GetMapping("/list")
     public ResponseEntity<List<CommentResponseDto>> getComments(@PathVariable Long postId) {
         List<CommentResponseDto> responses = commentService.getCommentsByPost(postId);
         return ResponseEntity.ok(responses);
     }
 
-    /**
-     * 댓글 수정
-     */
     @PatchMapping("/{commentId}")
     public ResponseEntity<CommentResponseDto> updateComment(
             @PathVariable Long commentId,
@@ -54,9 +45,6 @@ public class CommentController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * 댓글 삭제
-     */
     @DeleteMapping("/{commentId}")
     public ResponseEntity<Void> deleteComment(@PathVariable Long commentId) {
         commentService.deleteComment(commentId);
