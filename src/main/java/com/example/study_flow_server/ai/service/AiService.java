@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -66,9 +67,17 @@ public class AiService {
             aiDatabaseService.saveAnalysisResult(user, prompt, response);
 
             return response;
-        } catch (Exception e) {// WebClient 에러 또는 DB 저장 에러를 여기서 잡는다.
-            log.error(">>>> [ERROR] AI 서버 통신 또는 DB 저장 중 사고 발생: {}", e.getMessage());
-            //  추후 WebClient 관련 예외를 따로 분리하여 더 상세한 에러 처리가 가능하다.
+        } catch (CustomException e) {
+            // orElseThrow()에서 발생시킨 CustomException 또는 aiDatabaseService에서 발생시킨 CustomException을 처리한다.
+            log.error(">>>> [ERROR] 사용자 정의 예외 발생: {}", e.getMessage());
+            throw e; // 이미 적절한 ErrorCode를 가지고 있으므로 그대로 다시 던진다.
+        } catch (WebClientResponseException e) {
+            // AI 서버로부터 4xx, 5xx HTTP 응답을 받은 경우 (예: AI 서버의 잘못된 요청, AI 서버 내부 오류)
+            log.error(">>>> [ERROR] AI 서버 응답 오류 발생: 상태 코드 = {}, 응답 본문 = {}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new CustomException(ErrorCode.AI_SERVER_ERROR);
+        } catch (Exception e) {
+            // 그 외 예상치 못한 모든 예외를 처리한다. (네트워크 문제, 기타 런타임 오류 등)
+            log.error(">>>> [ERROR] 예상치 못한 AI 서버 통신 또는 DB 저장 중 사고 발생: {}", e.getMessage());
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
