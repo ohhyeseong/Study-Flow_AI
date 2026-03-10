@@ -2,8 +2,11 @@ package com.example.study_flow_server.comment.service;
 
 import com.example.study_flow_server.comment.dto.CommentCreateDto;
 import com.example.study_flow_server.comment.dto.CommentResponseDto;
+import com.example.study_flow_server.comment.dto.CommentUpdateDto;
 import com.example.study_flow_server.comment.repository.CommentRepository;
 import com.example.study_flow_server.comment.domain.Comment;
+import com.example.study_flow_server.global.exception.CustomException;
+import com.example.study_flow_server.global.exception.ErrorCode;
 import com.example.study_flow_server.post.domain.Post;
 import com.example.study_flow_server.post.repository.PostRepository;
 import com.example.study_flow_server.user.domain.User;
@@ -27,15 +30,15 @@ public class CommentService {
     @Transactional
     public CommentResponseDto createComment(Long postId, Long userId, CommentCreateDto createDto) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 존재하지 않습니다. id=" + postId));
+                .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 사용자가 존재하지 않습니다. id=" + userId));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         Comment parent = null;
         if (createDto.parentId() != null) {
             parent = commentRepository.findById(createDto.parentId())
-                    .orElseThrow(() -> new IllegalArgumentException("부모 댓글이 존재하지 않습니다. id=" + createDto.parentId()));
+                    .orElseThrow(() -> new CustomException(ErrorCode.COMMENT_NOT_FOUND));
         }
 
         Comment comment = Comment.builder()
@@ -45,37 +48,43 @@ public class CommentService {
                 .parent(parent)
                 .build();
 
-        commentRepository.save(comment);
+        Comment response = commentRepository.save(comment);
 
-        return CommentResponseDto.from(comment);
+        return CommentResponseDto.from(response);
     }
 
     public List<CommentResponseDto> getCommentsByPost(Long postId) {
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 존재하지 않습니다. id=" + postId));
-
-        // 모든 댓글을 가져온 후, 부모가 없는 최상위 댓글만 필터링해서 DTO로 변환
-        // (자식 댓글은 DTO 내부에서 재귀적으로 변환됨)
-        return commentRepository.findAllByPost(post).stream()
+        return commentRepository.findAllByPostIdWithUserAndPost(postId).stream()
                 .filter(comment -> comment.getParent() == null)
                 .map(CommentResponseDto::from)
                 .collect(Collectors.toList());
     }
 
     @Transactional
-    public CommentResponseDto updateComment(Long commentId, String content) {
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 댓글이 존재하지 않습니다. id=" + commentId));
+    public CommentResponseDto updateComment(CommentUpdateDto dto,
+                                            Long commentId,
+                                            User user) {
 
-        comment.update(content);
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMMENT_NOT_FOUND));
+
+        if(!comment.getUser().getId().equals(user.getId())){
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+
+        comment.update(dto.content());
 
         return CommentResponseDto.from(comment);
     }
 
     @Transactional
-    public void deleteComment(Long commentId) {
+    public void deleteComment(Long commentId, User user) {
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 댓글이 존재하지 않습니다. id=" + commentId));
+                .orElseThrow(() -> new CustomException(ErrorCode.COMMENT_NOT_FOUND));
+
+        if (!comment.getUser().getId().equals(user.getId())) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
 
         commentRepository.delete(comment);
     }

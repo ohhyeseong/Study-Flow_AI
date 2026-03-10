@@ -11,6 +11,7 @@ import com.example.study_flow_server.ai.service.AiService;
 import com.example.study_flow_server.ai.service.QuizService;
 import com.example.study_flow_server.global.exception.CustomException;
 import com.example.study_flow_server.global.exception.ErrorCode;
+import com.example.study_flow_server.global.response.ApiResponse;
 import com.example.study_flow_server.global.security.CustomUserDetails;
 import com.example.study_flow_server.user.domain.User;
 import jakarta.validation.Valid;
@@ -36,24 +37,26 @@ public class AiController {
     private final QuizService quizService;
 
     @PostMapping(value = "/analyze", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public AiResponseDto analyzeImage(
+    public ApiResponse<AiResponseDto> analyzeImage(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestPart(value = "file", required = false) MultipartFile file,
             @RequestPart("prompt") String prompt
     ) {
-        log.info("AI 분석 요청 - 사용자: {}, 파일: {}, 프롬프트: {}", userDetails.getUsername(), file.getOriginalFilename(), prompt);
-        return aiService.analyzeImage(userDetails.getUser(), file, prompt);
+        log.info("AI 분석 요청 - 사용자: {}, 파일: {}, 프롬포트: {}", userDetails.getUsername(), file.getOriginalFilename(), prompt);
+        AiResponseDto responseDto = aiService.analyzeImage(userDetails.getUser(), file, prompt);
+        return ApiResponse.ok(responseDto);
     }
 
     @GetMapping("/history")
-    public List<AiHistoryResponseDto> getHistoryList(
+    public ApiResponse<List<AiHistoryResponseDto>> getHistoryList(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        return aiService.getHistoryList(userDetails.getUser().getId());
+        List<AiHistoryResponseDto> historyList = aiService.getHistoryList(userDetails.getUser().getId());
+        return ApiResponse.ok(historyList);
     }
 
     @PostMapping("/quiz/submit")
-    public ResponseEntity<List<AiHistoryResponseDto>> submitAnswer(
+    public ApiResponse<List<AiHistoryResponseDto>> submitAnswer(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody QuizSubmitRequest request
     ) {
@@ -61,14 +64,14 @@ public class AiController {
 
         quizService.submitAnswer(userDetails.getUser(), request);
         List<AiHistoryResponseDto> historyList = aiService.getHistoryList(user.getId());
-        return ResponseEntity.ok(historyList);
+        return ApiResponse.ok(historyList);
     }
 
     @GetMapping("/notes/wrong")
-    public ResponseEntity<List<WrongNoteResponse>> getWrongNotes(
+    public ApiResponse<List<WrongNoteResponse>> getWrongNotes(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         List<WrongNoteResponse> wrongNotes = aiService.getWrongNotes(userDetails.getUser().getId());
-        return ResponseEntity.ok(wrongNotes);
+        return ApiResponse.ok(wrongNotes);
     }
 }
