@@ -22,4 +22,9 @@ public abstract class BaseEntity {
 
     @LastModifiedDate
     private LocalDateTime modifiedAt; // 수정
+
+    //테스트코드 목적용
+    public void setCreatedAt(LocalDateTime createdAt){
+        this.createdAt = createdAt;
+    }
 }

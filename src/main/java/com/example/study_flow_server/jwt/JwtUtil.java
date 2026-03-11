@@ -5,13 +5,21 @@ import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.security.Key;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.Date;
 import java.time.Duration;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -88,6 +96,23 @@ public class JwtUtil {
     // 토큰에서 사용자 정보 가져오기
     public Claims getUserInfoFromToken(String token) {
         return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+    }
+
+    // 인증 정보 조회
+    public Authentication getAuthentication(String token) {
+        // 토큰에서 사용자 정보(Claims)를 가져온다.
+        Claims claims = getUserInfoFromToken(token);
+        String username = claims.getSubject();
+        String role = claims.get("role", String.class);
+
+        // 권한 정보를 GrantedAuthority 객체의 리스트로 만든다.
+        List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority(role));
+
+        // UserDetails 객체를 생성한다. (스프링 시큐리티의 User 객체 사용)
+        UserDetails userDetails = new User(username, "", authorities);
+
+        // UserDetails 객체와 권한 정보를 기반으로 Authentication 객체를 생성하여 반환한다.
+        return new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
     }
 
     public Duration getRefreshTokenTimeToLive() {

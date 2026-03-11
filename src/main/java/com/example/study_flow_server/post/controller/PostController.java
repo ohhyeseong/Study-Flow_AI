@@ -1,5 +1,6 @@
 package com.example.study_flow_server.post.controller;
 
+import com.example.study_flow_server.global.exception.CustomException;
 import com.example.study_flow_server.global.security.CustomUserDetails;
 import com.example.study_flow_server.post.dto.PostCreateDto;
 import com.example.study_flow_server.post.dto.PostResponseDto;
@@ -28,10 +29,6 @@ PostController {
             @Valid @RequestBody PostCreateDto postCreateDto,
             @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
-        if (customUserDetails == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요한 서비스입니다.");
-        }
-
         postService.createPost(postCreateDto, customUserDetails.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED).body("게시글이 성공적으로 등록되었습니다.");
     }
@@ -43,14 +40,10 @@ PostController {
             @Valid @RequestBody PostCreateDto postCreateDto,
             @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
-        if (customUserDetails == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요한 서비스입니다.");
-        }
-
         try {
             postService.updatePost(id, postCreateDto, customUserDetails.getUsername());
             return ResponseEntity.ok("게시글이 성공적으로 수정되었습니다.");
-        } catch (IllegalArgumentException e) {
+        } catch (CustomException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         }
     }

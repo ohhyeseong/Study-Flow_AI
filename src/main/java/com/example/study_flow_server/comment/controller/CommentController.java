@@ -2,10 +2,13 @@ package com.example.study_flow_server.comment.controller;
 
 import com.example.study_flow_server.comment.dto.CommentCreateDto;
 import com.example.study_flow_server.comment.dto.CommentResponseDto;
+import com.example.study_flow_server.comment.dto.CommentUpdateDto;
 import com.example.study_flow_server.comment.service.CommentService;
+import com.example.study_flow_server.global.response.ApiResponse;
 import com.example.study_flow_server.global.security.CustomUserDetails;
+import com.example.study_flow_server.user.domain.User;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,48 +21,41 @@ public class CommentController {
 
     private final CommentService commentService;
 
-    /**
-     * 댓글 작성 (대댓글 포함)
-     */
     @PostMapping
-    public ResponseEntity<CommentResponseDto> createComment(
+    public ApiResponse<CommentResponseDto> createComment(
             @PathVariable Long postId,
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody CommentCreateDto createDto) {
+            @Valid @RequestBody CommentCreateDto createDto) {
 
         Long userId = userDetails.getUser().getId();
-
         CommentResponseDto response = commentService.createComment(postId, userId, createDto);
-        return ResponseEntity.ok(response);
+        return ApiResponse.ok(response);
     }
 
-    /**
-     * 특정 게시글의 모든 댓글 조회 (계층형)
-     */
     @GetMapping("/list")
-    public ResponseEntity<List<CommentResponseDto>> getComments(@PathVariable Long postId) {
+    public ApiResponse<List<CommentResponseDto>> getCommentsByPost(@PathVariable Long postId) {
         List<CommentResponseDto> responses = commentService.getCommentsByPost(postId);
-        return ResponseEntity.ok(responses);
+        return ApiResponse.ok(responses);
     }
 
-    /**
-     * 댓글 수정
-     */
     @PatchMapping("/{commentId}")
-    public ResponseEntity<CommentResponseDto> updateComment(
+    public ApiResponse<CommentResponseDto> updateComment(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long commentId,
-            @RequestBody String content) {
+            @Valid @RequestBody CommentUpdateDto updateDto) {
 
-        CommentResponseDto response = commentService.updateComment(commentId, content);
-        return ResponseEntity.ok(response);
+        User user = userDetails.getUser();
+        CommentResponseDto response = commentService.updateComment(updateDto,commentId,user);
+        return ApiResponse.ok(response);
     }
 
-    /**
-     * 댓글 삭제
-     */
     @DeleteMapping("/{commentId}")
-    public ResponseEntity<Void> deleteComment(@PathVariable Long commentId) {
-        commentService.deleteComment(commentId);
-        return ResponseEntity.noContent().build();
+    public ApiResponse<Void> deleteComment(
+            @PathVariable Long commentId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        User user = userDetails.getUser();
+        commentService.deleteComment(commentId,user);
+        return ApiResponse.ok();
     }
 }

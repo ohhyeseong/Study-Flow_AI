@@ -11,8 +11,10 @@ import com.example.study_flow_server.ai.service.AiService;
 import com.example.study_flow_server.ai.service.QuizService;
 import com.example.study_flow_server.global.exception.CustomException;
 import com.example.study_flow_server.global.exception.ErrorCode;
+import com.example.study_flow_server.global.response.ApiResponse;
 import com.example.study_flow_server.global.security.CustomUserDetails;
 import com.example.study_flow_server.user.domain.User;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -24,6 +26,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 
+@CrossOrigin(origins = "http://localhost:3000")
 @RestController
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
@@ -32,63 +35,43 @@ public class AiController {
 
     private final AiService aiService;
     private final QuizService quizService;
-    private final QuizResultRepository quizResultRepository;
 
     @PostMapping(value = "/analyze", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public Mono<AiResponseDto> analyzeImage(
+    public ApiResponse<AiResponseDto> analyzeImage(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestPart("file") MultipartFile file,
+            @RequestPart(value = "file", required = false) MultipartFile file,
             @RequestPart("prompt") String prompt
     ) {
-        if (userDetails == null) {
-            log.error("인증된 사용자 정보가 없습니다. (userDetails is null)");
-            return Mono.error(new CustomException(ErrorCode.UNAUTHORIZED));
-        }
-        log.info("AI 분석 요청 - 사용자: {}, 파일: {}, 프롬프트: {}", userDetails.getUsername(), file.getOriginalFilename(), prompt);
-        return aiService.analyzeImage(userDetails.getUser(), file, prompt);
+        log.info("AI 분석 요청 - 사용자: {}, 파일: {}, 프롬포트: {}", userDetails.getUsername(), file.getOriginalFilename(), prompt);
+        AiResponseDto responseDto = aiService.analyzeImage(userDetails.getUser(), file, prompt);
+        return ApiResponse.ok(responseDto);
     }
 
     @GetMapping("/history")
-    public List<AiHistoryResponseDto> getHistoryList(
+    public ApiResponse<List<AiHistoryResponseDto>> getHistoryList(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        if (userDetails == null) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED);
-        }
-        return aiService.getHistoryList(userDetails.getUser().getId());
+        List<AiHistoryResponseDto> historyList = aiService.getHistoryList(userDetails.getUser().getId());
+        return ApiResponse.ok(historyList);
     }
 
     @PostMapping("/quiz/submit")
-    public ResponseEntity<List<AiHistoryResponseDto>> submitAnswer(
+    public ApiResponse<List<AiHistoryResponseDto>> submitAnswer(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody QuizSubmitRequest request
+            @Valid @RequestBody QuizSubmitRequest request
     ) {
-        if (userDetails == null) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED);
-        }
         User user = userDetails.getUser();
 
         quizService.submitAnswer(userDetails.getUser(), request);
         List<AiHistoryResponseDto> historyList = aiService.getHistoryList(user.getId());
-        return ResponseEntity.ok(historyList);
+        return ApiResponse.ok(historyList);
     }
 
     @GetMapping("/notes/wrong")
-    public ResponseEntity<List<WrongNoteResponse>> getWrongNotes(
+    public ApiResponse<List<WrongNoteResponse>> getWrongNotes(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        if (userDetails == null) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED);
-        }
-        User user = userDetails.getUser();
-
-        List<QuizResult> results = quizResultRepository
-                .findAllByUserIdAndStatusOrderByCreatedAtDesc(user.getId(), SolveStatus.WRONG);
-
-        List<WrongNoteResponse> responses = results.stream()
-                .map(WrongNoteResponse::from)
-                .toList();
-
-        return ResponseEntity.ok(responses);
+        List<WrongNoteResponse> wrongNotes = aiService.getWrongNotes(userDetails.getUser().getId());
+        return ApiResponse.ok(wrongNotes);
     }
 }

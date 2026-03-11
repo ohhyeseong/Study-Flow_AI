@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import apiClient from '../api';
+import Header from '../components/Header'; // 👈 공통 헤더 임포트
 
 const BoardPage = () => {
     const [posts, setPosts] = useState([]);
@@ -16,6 +17,7 @@ const BoardPage = () => {
 
     const fetchPosts = async () => {
         try {
+            // 화면에 403 에러가 뜬다면 서버의 SecurityConfig 확인이 필요합니다.
             const response = await apiClient.get('/api/posts/list');
             setPosts(response.data);
         } catch (error) {
@@ -67,18 +69,23 @@ const BoardPage = () => {
     };
 
     return (
-        <div style={styles.container}>
-            <div style={styles.stickyHeader}>
-                <div style={styles.header}>
-                    <h2>📋 자유 게시판</h2>
-                    <Link to="/main" style={styles.backLink}>← 메인으로</Link>
+        <div style={styles.layout}>
+            {/* 🔵 각 페이지 상단에 헤더 직접 추가 */}
+            <Header />
+
+            <div style={styles.container}>
+                {/* 🟢 고정 영역: 게시글 작성 폼 */}
+                <div style={styles.stickyHeader}>
+                    <div style={styles.headerRow}>
+                        <h2 style={{margin: 0}}>📋 자유 게시판</h2>
+                        <Link to="/main" style={styles.backLink}>← 메인으로</Link>
+                    </div>
+                    <div style={styles.createForm}>
+                        <input type="text" placeholder="제목을 입력하세요" value={newPostTitle} onChange={(e) => setNewPostTitle(e.target.value)} style={styles.input} />
+                        <textarea placeholder="내용을 입력하세요" value={newPostContent} onChange={(e) => setNewPostContent(e.target.value)} style={styles.textarea} />
+                        <button onClick={handleCreatePost} style={styles.button}>게시글 작성</button>
+                    </div>
                 </div>
-                <div style={styles.createForm}>
-                    <input type="text" placeholder="제목" value={newPostTitle} onChange={(e) => setNewPostTitle(e.target.value)} style={styles.input} />
-                    <textarea placeholder="내용을 입력하세요" value={newPostContent} onChange={(e) => setNewPostContent(e.target.value)} style={styles.textarea} />
-                    <button onClick={handleCreatePost} style={styles.button}>게시글 작성</button>
-                </div>
-            </div>
 
             <div style={styles.scrollArea}>
                 <div style={styles.postList}>
@@ -149,29 +156,37 @@ const BoardPage = () => {
 };
 
 const styles = {
-    container: { height: '100vh', display: 'flex', flexDirection: 'column', maxWidth: '800px', margin: '0 auto', backgroundColor: '#fff' },
-    stickyHeader: { padding: '20px', backgroundColor: '#fff', borderBottom: '2px solid #eee', zIndex: 10 },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' },
-    createForm: { padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '8px' },
+    layout: { height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f5f7fb' },
+    container: { flex: 1, display: 'flex', flexDirection: 'column', maxWidth: '800px', margin: '0 auto', width: '100%', overflow: 'hidden', backgroundColor: '#fff' },
+
+    stickyHeader: { padding: '20px', backgroundColor: '#fff', borderBottom: '1px solid #eee', zIndex: 10 },
+    headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' },
+    createForm: { padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '12px' },
+
     scrollArea: { flex: 1, overflowY: 'auto', padding: '20px' },
-    backLink: { textDecoration: 'none', color: '#4285F4', fontWeight: 'bold' },
-    input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' },
-    textarea: { width: '100%', padding: '10px', height: '60px', marginBottom: '10px', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' },
-    button: { width: '100%', padding: '10px', backgroundColor: '#4285F4', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
+
+    backLink: { textDecoration: 'none', color: '#4285F4', fontWeight: 'bold', fontSize: '14px' },
+    input: { width: '100%', padding: '12px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box', outline: 'none' },
+    textarea: { width: '100%', padding: '12px', height: '70px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box', outline: 'none', resize: 'none' },
+    button: { width: '100%', padding: '12px', backgroundColor: '#4285F4', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
+
     postList: { display: 'flex', flexDirection: 'column', gap: '20px' },
-    postCard: { padding: '20px', border: '1px solid #eee', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' },
-    postTitle: { margin: '0 0 10px 0' },
-    postContent: { whiteSpace: 'pre-wrap', color: '#555' },
-    postMeta: { fontSize: '12px', color: '#999', marginTop: '10px' },
-    commentSection: { marginTop: '15px', borderTop: '1px solid #eee', paddingTop: '10px' },
+    postCard: { padding: '20px', border: '1px solid #eee', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' },
+    postTitle: { margin: '0 0 10px 0', color: '#333' },
+    postContent: { whiteSpace: 'pre-wrap', color: '#555', lineHeight: '1.5' },
+    postMeta: { fontSize: '12px', color: '#999', marginTop: '15px' },
+
+    commentSection: { marginTop: '15px', borderTop: '1px solid #f1f1f1', paddingTop: '10px' },
     commentItem: { padding: '8px 0', borderBottom: '1px solid #f9f9f9' },
-    commentMain: { display: 'flex', justifyContent: 'space-between', fontSize: '14px' },
-    replyButton: { border: 'none', background: 'none', color: '#4285F4', cursor: 'pointer', fontSize: '12px' },
+    commentMain: { display: 'flex', justifyContent: 'space-between', fontSize: '14px', alignItems: 'center' },
+    replyButton: { border: 'none', background: 'none', color: '#4285F4', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' },
+
     replyInputWrapper: { marginLeft: '20px', marginTop: '5px' },
-    replyInput: { width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd', outline: 'none' },
-    replyItem: { marginLeft: '20px', fontSize: '13px', color: '#666', marginTop: '5px' },
+    replyInput: { width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #eee', outline: 'none', fontSize: '13px' },
+    replyItem: { marginLeft: '20px', fontSize: '13px', color: '#666', marginTop: '5px', backgroundColor: '#f8f9fa', padding: '5px 10px', borderRadius: '6px' },
     replyArrow: { marginRight: '5px', color: '#4285F4' },
-    commentInput: { width: '100%', padding: '8px', marginTop: '10px', boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: '4px' }
+    commentInput: { width: '100%', padding: '10px', marginTop: '15px', boxSizing: 'border-box', border: '1px solid #eee', borderRadius: '8px', outline: 'none' },
+    emptyText: { textAlign: 'center', color: '#999', marginTop: '40px' }
 };
 
 export default BoardPage;
