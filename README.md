@@ -1,38 +1,64 @@
 # 📚 Study-Flow: AI 기반 맞춤형 학습 보조 서비스
 
-> 사용자가 업로드한 학습 자료(이미지)를 분석하고, 음성 인터페이스를 통해 대화형 학습 및 퀴즈 생성을 지원하는 통합 AI 학습 보조 서비스입니다.
+> 사용자가 업로드한 학습 자료(이미지)를 분석하고, 음성 및 지도를 통해 대화형 학습과 퀴즈를 제공하는 통합 AI 학습 보조 서비스입니다.
+> 본 저장소는 **Spring Boot 백엔드**, **Python AI 서버**, **React 프론트엔드**로 구성된 모노레포입니다.
 
 ---
 
 ## 🛠 Tech Stack (기술 스택)
 
-### Backend & AI Infrastructure
-* **Main Server:** Java 17 / Spring Boot 3.x
-* **AI Orchestration:** **LangChain** (전체 AI 로직 체이닝)
-* **AI Server:** Python 3.10+ / FastAPI
-* **Database:** MySQL (사용자 및 학습 이력 관리)
-* **Vector DB:** **ChromaDB** (지식 베이스 및 RAG 구현)
+### Backend (Spring Boot)
+* **Main Server:** Java 21 / Spring Boot 3.5.10
+* **Database:** MySQL
+* **In-Memory DB:** Redis (리프레시 토큰, 이메일 인증 코드, 토큰 블랙리스트 관리)
+* **Authentication:** Spring Security, JWT (JSON Web Token)
+* **Real-time Comm:** WebSocket, STOMP (실시간 채팅)
+* **ORM:** Spring Data JPA (Hibernate)
+* **Build Tool:** Gradle
 
-### AI Models & Engines
-* **Vision & LLM:** **Ollama (Llama 3.2-Vision)** - 이미지 분석 및 문제 생성
-* **STT (Speech-to-Text):** **OpenAI Whisper** - 사용자 음성 질문 인식
-* **TTS (Text-to-Speech):** **Coqui TTS** - AI 답변 및 퀴즈 음성 출력
+### AI & Models
+* **AI Server (Python/FastAPI):**
+    * **Framework:** FastAPI, LangChain
+    * **Vector DB:** ChromaDB
+    * **Main LLM:** Anthropic Claude 3 Sonnet (for Image/Text Analysis)
+* **Map Recommendation LLM:** Groq Llama 3.3 70B (used in Backend)
+
+### Frontend (React)
+* **Framework:** React
+* **Routing:** React Router (`react-router-dom`)
+* **HTTP Client:** Axios
+* **Real-time Comm:** Stomp.js, SockJS Client
+* **Map:** Kakao Maps API
 
 ---
 
-## 📂 Project Structure (폴더 구조)
+## 📂 Project Structure (프로젝트 구조)
+
+본 프로젝트는 3개의 주요 애플리케이션으로 구성된 모노레포(Monorepo)입니다.
 
 ```text
-Study-Flow/
-├── study-flow-server/       # Spring Boot 메인 서버 (포트: 8080)
-│   └── src/main/java/com/studyflow/
-├── study-flow-ai/           # Python AI 통합 서버 (포트: 8000)
-│   ├── main.py              # FastAPI 엔드포인트
-│   ├── chain.py             # LangChain 기반 로직 통합 (핵심)
-│   ├── vision_module.py     # Llama 3.2-Vision 이미지 분석
-│   ├── audio_module.py      # Whisper(STT) & Coqui(TTS) 엔진
-│   └── chromadb_utils.py    # 벡터 저장소 관리
-└── README.md
+Study-Flow_AI/ (Monorepo Root)
+├── 🤖 ai-server/                 # Python FastAPI AI 서버
+│   ├── app/                      # FastAPI 핵심 로직 (라우터, 서비스)
+│   ├── main.py                   # 서버 실행 엔트리포인트
+│   └── requirements.txt          # Python 의존성
+│
+├── 🖥️ landmark-app/               # React 프론트엔드
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   └── App.js
+│   └── package.json
+│
+└── ☕️ src/ (study-flow-server)   # Spring Boot 메인 백엔드 서버
+    └── main/java/com/example/study_flow_server/
+        ├── ai/
+        ├── chat/
+        ├── comment/
+        ├── global/
+        ├── landmark/
+        ├── post/
+        └── user/
 ```
 ---
 
@@ -74,7 +100,7 @@ Study-Flow/
   ollama pull llama3.2-vision
 
 ### 2. Python 라이브러리 설치
-* 프로젝트 구동에 필요한 핵심 라이브러리들을 아래 명령어로 설치합니다. **(Python 3.10 이상 권장)**
+* 프로젝트 구동에 필요한 핵심 라이브러리들을 아래 명령어로 설치합니다. **(Python 3.12 이상 권장)**
 ```bash
   pip install -r requirements.txt
 ```
@@ -83,7 +109,7 @@ Study-Flow/
 #### 🤖 AI 통합 서버 (Python/FastAPI)
 1. `study-flow-ai` 폴더로 이동합니다.
 2. 아래 명령어를 실행하여 서버를 가동합니다.
-   - 명령어: `uvicorn main:app --reload --port 8000`
+   - 명령어: `python main.py`
    - 서버 실행 후 `http://localhost:8000/docs`에서 API 명세(Swagger) 확인이 가능합니다.
 
 #### ☕ 메인 백엔드 서버 (Spring Boot)
@@ -91,7 +117,7 @@ Study-Flow/
 2. Gradle을 이용하여 프로젝트를 빌드하고 실행합니다.
    - **Windows (CMD/PowerShell):** `./gradlew bootRun`
    - **Mac/Linux:** `./gradlew bootRun`
-   - 메인 서버는 `http://localhost:8081`에서 구동됩니다.
+   - 메인 서버는 `http://localhost:8090`에서 구동됩니다.
 
 ---
 
@@ -102,4 +128,3 @@ Study-Flow/
 2. **API 통신:** Spring Boot 서버와 FastAPI 서버 간의 데이터 교환은 JSON 형식을 원칙으로 합니다.
 3. **모델 가중치:** Whisper와 Coqui TTS 모델은 첫 실행 시 자동으로 다운로드되므로, 안정적인 네트워크 환경에서 처음 구동하는 것을 권장합니다.
 4. **코드 리뷰:** 기능 구현 후 PR을 올리면 다른 팀원의 승인(Approve)을 최소 1개 이상 받아야 머지할 수 있습니다. 직접 Push는 Ruleset에 의해 차단됩니다.
-

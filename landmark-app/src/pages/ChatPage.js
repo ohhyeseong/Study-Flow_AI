@@ -21,6 +21,7 @@ const ChatPage = () => {
     const fetchRooms = async () => {
         try {
             const response = await apiClient.get('/api/chat/rooms');
+            setChatHistory(response.data);
             setRooms(response.data);
         } catch (error) {
             console.error('채팅방 목록 불러오기 실패:', error);

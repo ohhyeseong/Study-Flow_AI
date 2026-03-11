@@ -1,13 +1,11 @@
 package com.example.study_flow_server.ai.service;
 
-import com.example.study_flow_server.ai.dto.AiQuizDto;
 import com.example.study_flow_server.ai.dto.AiResponseDto;
 import com.example.study_flow_server.ai.entity.AiHistory;
 import com.example.study_flow_server.ai.entity.Quiz;
 import com.example.study_flow_server.ai.repository.AiHistoryRepository;
 import com.example.study_flow_server.ai.repository.QuizRepository;
 import com.example.study_flow_server.user.domain.User;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,7 +36,7 @@ public class AiDatabaseService {
         response.getQuiz().ifPresent(quizDto -> {
             try {
                 Quiz quiz = Quiz.builder()
-                        .aiHistory(savedHistory)
+                        .aiHistory(history) // 먼저 메모리상에서 관계를 설정
                         .question(quizDto.question())
                         .options(quizDto.options())
                         .answer(quizDto.answer())

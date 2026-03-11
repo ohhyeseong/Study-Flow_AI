@@ -52,4 +52,9 @@ public class AiHistory extends BaseEntity {
         super.setCreatedAt(createdAt);
     }
 
+    //== 연관관계 편의 메서드 ==//
+    public void setQuiz(Quiz quiz) {
+        this.quiz = quiz;
+    }
+
 }
