@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+langchain
+langchain-ollama
+langchain-community
+langchain-chroma
+python-multipart
+pillow
+chromadb
+pypdf
+openai-whisper
+python-dotenv
+anthropic
+pydantic-settings

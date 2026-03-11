@@ -1,0 +1,256 @@
+import React, { useEffect, useState, useRef } from 'react';
+import apiClient from '../api';
+import { useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import Header from '../components/Header';
+
+function MainPage() {
+  const [chatHistory, setChatHistory] = useState([]);
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [currentQuiz, setCurrentQuiz] = useState(null);
+  const [userAnswer, setUserAnswer] = useState(null);
+  const [isCorrect, setIsCorrect] = useState(null);
+
+  const navigate = useNavigate();
+  const chatEndRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatHistory]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token || token === "undefined") {
+      navigate('/login');
+    } else {
+      fetchChatHistory();
+    }
+  }, [navigate]);
+const fetchChatHistory = async () => {
+  try {
+    const response = await apiClient.get('/api/ai/history');
+
+    // 콘솔에서 보셨듯이 실제 배열은 response.data.data에 들어있습니다.
+    if (response.data && Array.isArray(response.data.data)) {
+      setChatHistory(response.data.data);
+    } else {
+      setChatHistory([]); // 만약 데이터가 없으면 빈 배열로 초기화
+    }
+
+  } catch (err) {
+    console.error("히스토리 불러오기 실패:", err);
+    setChatHistory([]);
+    if (err.response?.status === 401 || err.response?.status === 403) {
+      localStorage.removeItem('token');
+      navigate('/login');
+    }
+  }
+};
+
+  const parseQuiz = (text) => {
+    if (!text) return null;
+    try {
+      const quizMatch = text.match(/###QUIZ###\s*({.*})\s*###QUIZ###/s);
+      return quizMatch ? JSON.parse(quizMatch[1]) : null;
+    } catch (e) { return null; }
+  };
+
+  const handleAIChat = async () => {
+    if (!selectedFile || isLoading) {
+      alert("이미지를 선택하고 질문을 입력해주세요.");
+      return;
+    }
+
+    const tempFile = selectedFile;
+    const tempPrompt = customPrompt;
+    const tempPreview = previewUrl;
+
+    setCustomPrompt("");
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+
+    // 🟢 전송 직후 로컬 표시용 데이터 추가
+    setChatHistory(prev => [...prev, {
+        userPrompt: tempPrompt,
+        imageUrl: tempPreview,
+        aiResponse: null
+    }]);
+    setIsLoading(true);
+
+    const formData = new FormData();
+    formData.append('file', tempFile);
+    formData.append('prompt', tempPrompt || "이 문제를 설명해줘.");
+
+    try {
+      const res = await apiClient.post(`/api/ai/analyze`, formData);
+      const aiContent = res.data.ai_response || res.data.aiResponse || res.data.content;
+
+      if (aiContent) {
+        setChatHistory(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1].aiResponse = aiContent;
+          return updated;
+        });
+      }
+    } catch (err) {
+      console.error("분석 실패:", err);
+      alert("AI 분석 중 오류가 발생했습니다.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div style={styles.layout}>
+      <Header />
+      <div style={styles.content}>
+        <div style={styles.chatWrapper}>
+          <div style={styles.chatBox}>
+            {chatHistory.map((chat, i) => {
+              const quizData = parseQuiz(chat.aiResponse);
+
+              return (
+                <React.Fragment key={i}>
+                  {/* 🔵 1. 내 질문 (userPrompt가 있을 때만 출력) */}
+                  {chat.userPrompt && (
+                    <div style={styles.chatRow(true)}>
+                      <div style={styles.bubble(true)}>
+                        {chat.imageUrl && <img src={chat.imageUrl} alt="upload" style={styles.image} />}
+                        <div>{chat.userPrompt}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 🔴 2. AI 답변 (aiResponse가 있을 때만 출력) */}
+                  {chat.aiResponse && (
+                    <div style={styles.chatRow(false)}>
+                      <div style={styles.bubble(false)}>
+                        <div className="markdown-body">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {chat.aiResponse.replace(/###QUIZ###.*###QUIZ###/s, '')}
+                          </ReactMarkdown>
+                        </div>
+                        {quizData && (
+                          <button
+                            onClick={() => { setCurrentQuiz(quizData); setShowQuiz(true); setIsCorrect(null); setUserAnswer(null); }}
+                            style={styles.quizOpenBtn}
+                          >
+                            📝 관련 퀴즈 풀기
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
+            {isLoading && (
+              <div style={styles.chatRow(false)}>
+                <div style={styles.bubble(false)}>AI가 분석 중입니다... ⏳</div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          {previewUrl && (
+            <div style={styles.previewContainer}>
+              <img src={previewUrl} alt="preview" style={styles.smallPreview} />
+              <button onClick={() => {setSelectedFile(null); setPreviewUrl(null);}} style={styles.previewClose}>×</button>
+            </div>
+          )}
+
+          <div style={styles.inputArea}>
+            <input type="file" ref={fileInputRef} onChange={(e) => {
+              const file = e.target.files[0];
+              if(file) { setSelectedFile(file); setPreviewUrl(URL.createObjectURL(file)); }
+            }} style={{display:'none'}} />
+            <button onClick={() => fileInputRef.current.click()} style={styles.iconBtn}>📎</button>
+            <input style={styles.input} value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !isLoading && handleAIChat()} placeholder="질문을 입력하세요..." />
+            <button onClick={handleAIChat} style={styles.sendBtn} disabled={isLoading}>{isLoading ? "..." : "전송"}</button>
+          </div>
+        </div>
+
+        {/* 퀴즈 모달 (기존과 동일) */}
+        {showQuiz && currentQuiz && (
+          <div style={styles.modalOverlay}>
+            <div style={styles.modalContent}>
+              <h3 style={{color: '#4285F4'}}>🎯 AI 학습 퀴즈</h3>
+              <p style={{fontWeight:'bold', fontSize:'17px', margin:'20px 0'}}>{currentQuiz.question}</p>
+              <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
+                {currentQuiz.options.map((opt, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => { setUserAnswer(opt); setIsCorrect(opt === currentQuiz.answer); }}
+                    style={styles.optionBtn(userAnswer === opt, isCorrect, opt === currentQuiz.answer)}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+              {isCorrect !== null && (
+                <p style={{marginTop:'15px', color: isCorrect ? '#28a745' : '#dc3545', fontWeight:'bold'}}>
+                  {isCorrect ? "정답입니다! 👏" : `틀렸습니다. 정답: ${currentQuiz.answer}`}
+                </p>
+              )}
+              <button onClick={() => setShowQuiz(false)} style={styles.modalCloseBtn}>닫기</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const styles = {
+  layout: { width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f5f7fb' },
+  content: { flex: 1, position: 'relative', overflow: 'hidden' },
+  chatWrapper: { display: 'flex', flexDirection: 'column', height: '100%', maxWidth: '900px', margin: '0 auto', padding: '10px 20px 20px 20px' },
+  chatBox: { flex: 1, overflowY: 'auto', padding: '20px', backgroundColor: '#fff', borderRadius: '20px', border: '1px solid #eef2f6', marginBottom: '10px', display: 'flex', flexDirection: 'column' },
+
+  // 🟢 정렬 확실히 수정: isUser가 true면 flex-end(오른쪽)
+  chatRow: (isUser) => ({
+    display: 'flex',
+    justifyContent: isUser ? 'flex-end' : 'flex-start',
+    marginBottom: '15px',
+    width: '100%'
+  }),
+
+  // 🟢 배경색 확실히 수정: isUser가 true면 파란색, 아니면 연한 회색
+  bubble: (isUser) => ({
+    padding: '12px 18px',
+    borderRadius: isUser ? '20px 20px 0 20px' : '20px 20px 20px 0',
+    maxWidth: '80%',
+    backgroundColor: isUser ? '#4285F4' : '#f1f3f5',
+    color: isUser ? '#fff' : '#333',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+    lineHeight: '1.6'
+  }),
+
+  image: { maxWidth: '100%', maxHeight: '300px', borderRadius: '10px', marginBottom: '10px', display: 'block' },
+  quizOpenBtn: { marginTop: '10px', padding: '8px 12px', backgroundColor: '#fff', border: '1px solid #4285F4', color: '#4285F4', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
+  inputArea: { display: 'flex', gap: '10px', backgroundColor: '#fff', padding: '10px 25px', borderRadius: '35px', boxShadow: '0 4px 15px rgba(0,0,0,0.08)', alignItems: 'center' },
+  input: { flex: 1, border: 'none', outline: 'none', fontSize: '15px' },
+  sendBtn: { padding: '10px 25px', backgroundColor: '#4285F4', color: '#fff', border: 'none', borderRadius: '25px', cursor: 'pointer', fontWeight: 'bold' },
+  iconBtn: { background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' },
+  previewContainer: { position: 'relative', width: '60px', height: '60px', marginBottom: '10px', marginLeft: '10px' },
+  smallPreview: { width: '100%', height: '100%', borderRadius: '8px', objectFit: 'cover', border: '2px solid #4285F4' },
+  previewClose: { position: 'absolute', top: '-5px', right: '-5px', backgroundColor: '#ff4d4f', color: '#fff', border: 'none', borderRadius: '50%', width: '18px', height: '18px', fontSize: '12px', cursor: 'pointer' },
+  modalOverlay: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
+  modalContent: { backgroundColor: '#fff', padding: '30px', borderRadius: '20px', width: '400px', textAlign: 'center' },
+  optionBtn: (isSelected, isCorrect, isAnswer) => ({
+    padding: '12px', borderRadius: '10px', border: '1px solid #ddd', cursor: 'pointer', width: '100%', marginBottom: '5px',
+    backgroundColor: isSelected ? (isCorrect ? '#d4edda' : '#f8d7da') : (isCorrect !== null && isAnswer ? '#d4edda' : '#fff'),
+    borderColor: isSelected ? (isCorrect ? '#28a745' : '#dc3545') : '#ddd'
+  }),
+  modalCloseBtn: { marginTop: '20px', padding: '8px 20px', backgroundColor: '#6c757d', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer' }
+};
+
+export default MainPage;
