@@ -5,6 +5,7 @@ import { Stomp } from '@stomp/stompjs';
 import Header from '../components/Header';
 
 const ChatPage = () => {
+    const [chatHistory, setChatHistory] = useState([]);
     const [rooms, setRooms] = useState([]);
     const [currentRoom, setCurrentRoom] = useState(null);
     const [messages, setMessages] = useState([]);

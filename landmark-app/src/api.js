@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Axios 인스턴스 생성
 const apiClient = axios.create({
-    baseURL: 'http://localhost:8090', // 백엔드 서버 주소
+    baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8090', // 백엔드 서버 주소
 });
 
 // 요청 인터셉터 (Request Interceptor)

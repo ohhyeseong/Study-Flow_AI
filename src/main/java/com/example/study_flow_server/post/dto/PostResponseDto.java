@@ -25,6 +25,7 @@ public record PostResponseDto(
                 // 🟢 2. Post 엔티티에 저장된 댓글들을 CommentResponseDto로 변환해서 담아주기
                 post.getComments() != null ?
                         post.getComments().stream()
+                                .filter(comment -> comment.getParent() == null)
                                 .map(CommentResponseDto::from)
                                 .collect(Collectors.toList()) : List.of()
         );
