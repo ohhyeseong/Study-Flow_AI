@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import apiClient from '../api';
 import SockJS from 'sockjs-client';
 import { Stomp } from '@stomp/stompjs';
-import Header from '../components/Header'; // 👈 공통 헤더 임포트
+import Header from '../components/Header';
 
 const ChatPage = () => {
     const [rooms, setRooms] = useState([]);
@@ -21,6 +21,7 @@ const ChatPage = () => {
     const fetchRooms = async () => {
         try {
             const response = await apiClient.get('/api/chat/rooms');
+            setChatHistory(response.data);
             setRooms(response.data);
         } catch (error) {
             console.error('채팅방 목록 불러오기 실패:', error);
@@ -54,11 +55,18 @@ const ChatPage = () => {
     };
 
     const connectStomp = (roomId) => {
+        const token = localStorage.getItem('token'); // 로컬 스토리지에서 토큰 가져오기
+
         // 백엔드 포트 및 엔드포인트 확인 필요 (8090/ws-chat)
         const socket = new SockJS('http://localhost:8090/ws-chat');
         stompClient.current = Stomp.over(socket);
 
-        stompClient.current.connect({}, () => {
+        const connectHeaders = {};
+            if (token) {
+                connectHeaders['Authorization'] = `Bearer ${token}`; // 토큰이 있으면 헤더에 추가
+            }
+
+        stompClient.current.connect(connectHeaders, () => {
             stompClient.current.subscribe(`/sub/chat/room/${roomId}`, (message) => {
                 const receivedMessage = JSON.parse(message.body);
                 setMessages((prev) => [...prev, receivedMessage]);

@@ -33,19 +33,26 @@ function MainPage() {
       fetchChatHistory();
     }
   }, [navigate]);
+const fetchChatHistory = async () => {
+  try {
+    const response = await apiClient.get('/api/ai/history');
 
-  const fetchChatHistory = async () => {
-    try {
-      const response = await apiClient.get('/api/ai/history');
-      console.log("Chat History Data (From Server):", response.data);
-      setChatHistory(response.data);
-    } catch (err) {
-      if (err.response?.status === 401 || err.response?.status === 403) {
-        localStorage.removeItem('token');
-        navigate('/login');
-      }
+    // 콘솔에서 보셨듯이 실제 배열은 response.data.data에 들어있습니다.
+    if (response.data && Array.isArray(response.data.data)) {
+      setChatHistory(response.data.data);
+    } else {
+      setChatHistory([]); // 만약 데이터가 없으면 빈 배열로 초기화
     }
-  };
+
+  } catch (err) {
+    console.error("히스토리 불러오기 실패:", err);
+    setChatHistory([]);
+    if (err.response?.status === 401 || err.response?.status === 403) {
+      localStorage.removeItem('token');
+      navigate('/login');
+    }
+  }
+};
 
   const parseQuiz = (text) => {
     if (!text) return null;

@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final UserService userService;
-    private final EmailService emailService; // 이메일 서비스 추가
+    private final EmailService emailService;
 
     // 회원가입
     @PostMapping("/signup")
