@@ -36,6 +36,7 @@ public class CommentService {
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         Comment parent = null;
+        
         if (createDto.parentId() != null) {
             parent = commentRepository.findById(createDto.parentId())
                     .orElseThrow(() -> new CustomException(ErrorCode.COMMENT_NOT_FOUND));
