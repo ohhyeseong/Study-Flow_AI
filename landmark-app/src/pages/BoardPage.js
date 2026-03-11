@@ -19,7 +19,7 @@ const BoardPage = () => {
         try {
             // 화면에 403 에러가 뜬다면 서버의 SecurityConfig 확인이 필요합니다.
             const response = await apiClient.get('/api/posts/list');
-            setPosts(response.data);
+            setPosts(response.data.data);
         } catch (error) {
             console.error('목록 불러오기 실패:', error);
         }
@@ -100,9 +100,9 @@ const BoardPage = () => {
                             <div style={styles.commentSection}>
                                 <h4>댓글 ({post.comments ? post.comments.length : 0})</h4>
 
-                                {/* ✅ 수정됨: parentId가 없는 최상위 댓글만 먼저 렌더링 */}
+
                                 {post.comments && post.comments
-                                    .filter(comment => !comment.parentId)
+                                    .filter(comment => !comment.parent)
                                     .map(comment => (
                                         <div key={comment.id} style={styles.commentItem}>
                                             <div style={styles.commentMain}>
@@ -120,7 +120,12 @@ const BoardPage = () => {
                                                         placeholder="답글 입력 후 엔터..."
                                                         value={replyInputs[comment.id] || ''}
                                                         onChange={(e) => setReplyInputs({...replyInputs, [comment.id]: e.target.value})}
-                                                        onKeyDown={(e) => e.key === 'Enter' && handleAddReply(post.id, comment.id)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                                                                e.preventDefault();
+                                                                handleAddReply(post.id, comment.id);
+                                                            }
+                                                        }}
                                                         autoFocus
                                                     />
                                                 </div>
@@ -143,7 +148,12 @@ const BoardPage = () => {
                                     placeholder="댓글 입력 후 엔터..."
                                     value={commentInputs[post.id] || ''}
                                     onChange={(e) => setCommentInputs({...commentInputs, [post.id]: e.target.value})}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleAddComment(post.id)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                                            e.preventDefault();
+                                            handleAddComment(post.id);
+                                        }
+                                    }}
                                     style={styles.commentInput}
                                 />
                             </div>
@@ -156,37 +166,29 @@ const BoardPage = () => {
 };
 
 const styles = {
-    layout: { height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f5f7fb' },
-    container: { flex: 1, display: 'flex', flexDirection: 'column', maxWidth: '800px', margin: '0 auto', width: '100%', overflow: 'hidden', backgroundColor: '#fff' },
-
-    stickyHeader: { padding: '20px', backgroundColor: '#fff', borderBottom: '1px solid #eee', zIndex: 10 },
-    headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' },
-    createForm: { padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '12px' },
-
+    container: { height: '100vh', display: 'flex', flexDirection: 'column', maxWidth: '800px', margin: '0 auto', backgroundColor: '#fff' },
+    stickyHeader: { padding: '20px', backgroundColor: '#fff', borderBottom: '2px solid #eee', zIndex: 10 },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' },
+    createForm: { padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '8px' },
     scrollArea: { flex: 1, overflowY: 'auto', padding: '20px' },
-
-    backLink: { textDecoration: 'none', color: '#4285F4', fontWeight: 'bold', fontSize: '14px' },
-    input: { width: '100%', padding: '12px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box', outline: 'none' },
-    textarea: { width: '100%', padding: '12px', height: '70px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box', outline: 'none', resize: 'none' },
-    button: { width: '100%', padding: '12px', backgroundColor: '#4285F4', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
-
+    backLink: { textDecoration: 'none', color: '#4285F4', fontWeight: 'bold' },
+    input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' },
+    textarea: { width: '100%', padding: '10px', height: '60px', marginBottom: '10px', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' },
+    button: { width: '100%', padding: '10px', backgroundColor: '#4285F4', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
     postList: { display: 'flex', flexDirection: 'column', gap: '20px' },
-    postCard: { padding: '20px', border: '1px solid #eee', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' },
-    postTitle: { margin: '0 0 10px 0', color: '#333' },
-    postContent: { whiteSpace: 'pre-wrap', color: '#555', lineHeight: '1.5' },
-    postMeta: { fontSize: '12px', color: '#999', marginTop: '15px' },
-
-    commentSection: { marginTop: '15px', borderTop: '1px solid #f1f1f1', paddingTop: '10px' },
+    postCard: { padding: '20px', border: '1px solid #eee', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' },
+    postTitle: { margin: '0 0 10px 0' },
+    postContent: { whiteSpace: 'pre-wrap', color: '#555' },
+    postMeta: { fontSize: '12px', color: '#999', marginTop: '10px' },
+    commentSection: { marginTop: '15px', borderTop: '1px solid #eee', paddingTop: '10px' },
     commentItem: { padding: '8px 0', borderBottom: '1px solid #f9f9f9' },
-    commentMain: { display: 'flex', justifyContent: 'space-between', fontSize: '14px', alignItems: 'center' },
-    replyButton: { border: 'none', background: 'none', color: '#4285F4', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' },
-
+    commentMain: { display: 'flex', justifyContent: 'space-between', fontSize: '14px' },
+    replyButton: { border: 'none', background: 'none', color: '#4285F4', cursor: 'pointer', fontSize: '12px' },
     replyInputWrapper: { marginLeft: '20px', marginTop: '5px' },
-    replyInput: { width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #eee', outline: 'none', fontSize: '13px' },
-    replyItem: { marginLeft: '20px', fontSize: '13px', color: '#666', marginTop: '5px', backgroundColor: '#f8f9fa', padding: '5px 10px', borderRadius: '6px' },
+    replyInput: { width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd', outline: 'none' },
+    replyItem: { marginLeft: '20px', fontSize: '13px', color: '#666', marginTop: '5px' },
     replyArrow: { marginRight: '5px', color: '#4285F4' },
-    commentInput: { width: '100%', padding: '10px', marginTop: '15px', boxSizing: 'border-box', border: '1px solid #eee', borderRadius: '8px', outline: 'none' },
-    emptyText: { textAlign: 'center', color: '#999', marginTop: '40px' }
+    commentInput: { width: '100%', padding: '8px', marginTop: '10px', boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: '4px' }
 };
 
 export default BoardPage;
