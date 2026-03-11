@@ -87,60 +87,68 @@ const BoardPage = () => {
                     </div>
                 </div>
 
-                {/* 🟢 스크롤 영역: 게시글 목록 */}
-                <div style={styles.scrollArea}>
-                    <div style={styles.postList}>
-                        {posts.length === 0 ? (
-                            <p style={styles.emptyText}>등록된 게시글이 없습니다. 첫 글을 남겨보세요!</p>
-                        ) : (
-                            posts.map(post => (
-                                <div key={post.id} style={styles.postCard}>
-                                    <h3 style={styles.postTitle}>{post.title}</h3>
-                                    <p style={styles.postContent}>{post.content}</p>
-                                    <div style={styles.postMeta}>
-                                        작성자: {post.authorName} | {new Date(post.createdAt).toLocaleDateString()}
-                                    </div>
+            <div style={styles.scrollArea}>
+                <div style={styles.postList}>
+                    {posts.map(post => (
+                        <div key={post.id} style={styles.postCard}>
+                            <h3 style={styles.postTitle}>{post.title}</h3>
+                            <p style={styles.postContent}>{post.content}</p>
+                            <div style={styles.postMeta}>
+                                작성자: {post.authorName} | {new Date(post.createdAt).toLocaleDateString()}
+                            </div>
 
-                                    <div style={styles.commentSection}>
-                                        <h4 style={{fontSize: '14px', color: '#666'}}>댓글 ({post.comments ? post.comments.length : 0})</h4>
-                                        {post.comments && post.comments.map(comment => (
-                                            <div key={comment.id} style={styles.commentItem}>
-                                                <div style={styles.commentMain}>
-                                                    <span><strong>{comment.authorName}</strong>: {comment.content}</span>
-                                                    <button style={styles.replyButton} onClick={() => setActiveReplyId(activeReplyId === comment.id ? null : comment.id)}>답글</button>
-                                                </div>
-                                                {activeReplyId === comment.id && (
-                                                    <div style={styles.replyInputWrapper}>
-                                                        <input
-                                                            style={styles.replyInput}
-                                                            placeholder="답글 입력 후 엔터..."
-                                                            value={replyInputs[comment.id] || ''}
-                                                            onChange={(e) => setReplyInputs({...replyInputs, [comment.id]: e.target.value})}
-                                                            onKeyDown={(e) => e.key === 'Enter' && handleAddReply(post.id, comment.id)}
-                                                        />
-                                                    </div>
-                                                )}
-                                                {comment.children && comment.children.map(child => (
-                                                    <div key={child.id} style={styles.replyItem}>
-                                                        <span style={styles.replyArrow}>└</span>
-                                                        <strong>{child.authorName}</strong>: {child.content}
-                                                    </div>
-                                                ))}
+                            <div style={styles.commentSection}>
+                                <h4>댓글 ({post.comments ? post.comments.length : 0})</h4>
+
+                                {/* ✅ 수정됨: parentId가 없는 최상위 댓글만 먼저 렌더링 */}
+                                {post.comments && post.comments
+                                    .filter(comment => !comment.parentId)
+                                    .map(comment => (
+                                        <div key={comment.id} style={styles.commentItem}>
+                                            <div style={styles.commentMain}>
+                                                <strong>{comment.authorName}:</strong> {comment.content}
+                                                <button style={styles.replyButton} onClick={() => setActiveReplyId(activeReplyId === comment.id ? null : comment.id)}>
+                                                    {activeReplyId === comment.id ? '취소' : '답글'}
+                                                </button>
                                             </div>
-                                        ))}
-                                        <input
-                                            type="text"
-                                            placeholder="댓글 입력 후 엔터..."
-                                            value={commentInputs[post.id] || ''}
-                                            onChange={(e) => setCommentInputs({...commentInputs, [post.id]: e.target.value})}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleAddComment(post.id)}
-                                            style={styles.commentInput}
-                                        />
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
+
+                                            {/* 답글 입력창 */}
+                                            {activeReplyId === comment.id && (
+                                                <div style={styles.replyInputWrapper}>
+                                                    <input
+                                                        style={styles.replyInput}
+                                                        placeholder="답글 입력 후 엔터..."
+                                                        value={replyInputs[comment.id] || ''}
+                                                        onChange={(e) => setReplyInputs({...replyInputs, [comment.id]: e.target.value})}
+                                                        onKeyDown={(e) => e.key === 'Enter' && handleAddReply(post.id, comment.id)}
+                                                        autoFocus
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {/* 대댓글(자식) 출력 영역 */}
+                                            {comment.children && comment.children.map(child => (
+                                                <div key={child.id} style={styles.replyItem}>
+                                                    <span style={styles.replyArrow}>└</span>
+                                                    <strong>{child.authorName}:</strong> {child.content}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ))
+                                }
+
+                                {/* 새 일반 댓글 입력창 */}
+                                <input
+                                    type="text"
+                                    placeholder="댓글 입력 후 엔터..."
+                                    value={commentInputs[post.id] || ''}
+                                    onChange={(e) => setCommentInputs({...commentInputs, [post.id]: e.target.value})}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAddComment(post.id)}
+                                    style={styles.commentInput}
+                                />
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>
