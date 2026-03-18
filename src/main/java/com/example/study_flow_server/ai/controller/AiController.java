@@ -74,4 +74,15 @@ public class AiController {
         List<WrongNoteResponse> wrongNotes = aiService.getWrongNotes(userDetails.getUser().getId());
         return ApiResponse.ok(wrongNotes);
     }
+
+    @DeleteMapping("/notes/wrong/{quizId}")
+    public ApiResponse<Void> deleteWrongNote(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long quizId
+    ) {
+        Long userId = userDetails.getUser().getId();
+        aiService.deleteWrongNote(userId, quizId);
+
+        return ApiResponse.ok(null);
+    }
 }

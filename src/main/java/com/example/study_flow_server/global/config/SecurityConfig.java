@@ -27,7 +27,7 @@ public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
     private final RedisService redisService;
-    private final CustomUserDetailsService userDetailsService; // 💡 다시 추가!
+    private final CustomUserDetailsService userDetailsService;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -46,7 +46,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/ai/**").authenticated()
                         .anyRequest().permitAll()
                 )
-                // 💡 생성자에 userDetailsService 다시 추가!
                 .addFilterBefore(new JwtAuthenticationFilter(jwtUtil, redisService, userDetailsService), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

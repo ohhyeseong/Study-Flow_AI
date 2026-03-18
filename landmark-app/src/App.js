@@ -6,6 +6,7 @@ import MainPage from './pages/MainPage';
 import MapPage from './pages/MapPage';
 import BoardPage from './pages/BoardPage';
 import ChatPage from './pages/ChatPage';
+import WrongNotePage from './pages/WrongNotePage';
 
 // 수정된 PrivateRoute (Outlet 사용)
 const PrivateRoute = () => {
@@ -27,6 +28,7 @@ function App() {
                         <Route path="/map" element={<MapPage />} />
                         <Route path="/board" element={<BoardPage />} />
                         <Route path="/chat" element={<ChatPage />} />
+                        <Route path="/wrong-note" element={<WrongNotePage />} />
                     </Route>
 
                     <Route path="*" element={<div>페이지를 찾을 수 없습니다.</div>} />

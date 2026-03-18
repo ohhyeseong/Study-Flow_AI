@@ -8,4 +8,6 @@ import java.util.List;
 
 public interface QuizResultRepository extends JpaRepository<QuizResult, Long> {
     List<QuizResult> findAllByUserIdAndStatusOrderByCreatedAtDesc(Long userId, SolveStatus status);
+
+    void deleteByUserIdAndQuizId(Long userId, Long quizId);
 }

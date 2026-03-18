@@ -42,9 +42,8 @@ public class AiService {
         try {
             AiResponseDto response = requestAnalysisToAiServer(builder);
 
-            aiDatabaseService.saveAnalysisResult(user, prompt, response);
+            return aiDatabaseService.saveAnalysisResult(user, prompt, response);
 
-            return response;
         } catch (CustomException e) {
             throw e;
         } catch (WebClientResponseException e) {
@@ -86,5 +85,11 @@ public class AiService {
                 .bodyToMono(AiResponseDto.class)
                 .blockOptional()
                 .orElseThrow(() -> new CustomException(ErrorCode.AI_SERVER_ERROR));
+    }
+
+    @Transactional
+    public void deleteWrongNote(Long userId, Long quizId) {
+        quizResultRepository.deleteByUserIdAndQuizId(userId, quizId);
+        log.info(">>> 오답노트 삭제 완료 - 유저: {}, 퀴즈: {}", userId, quizId);
     }
 }
