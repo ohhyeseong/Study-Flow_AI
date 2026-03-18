@@ -21,6 +21,7 @@ function Header() {
         <button onClick={() => navigate('/map')} style={headerStyles.tabBtn(isActive('/map'))}>🗺️ 스터디 맵</button>
         <button onClick={() => navigate('/board')} style={headerStyles.tabBtn(isActive('/board'))}>📋 게시판</button>
         <button onClick={() => navigate('/chat')} style={headerStyles.tabBtn(isActive('/chat'))}>💬 채팅방</button>
+        <button onClick={() => navigate('/wrong-note')} style={headerStyles.tabBtn(isActive('/wrong-note'))}>📝 오답노트</button>
         <button onClick={handleLogout} style={headerStyles.logoutBtn}>로그아웃</button>
       </div>
     </div>

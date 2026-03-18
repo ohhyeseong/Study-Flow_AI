@@ -1,5 +1,6 @@
 package com.example.study_flow_server.ai.service;
 
+import com.example.study_flow_server.ai.dto.AiQuizDto;
 import com.example.study_flow_server.ai.dto.AiResponseDto;
 import com.example.study_flow_server.ai.entity.AiHistory;
 import com.example.study_flow_server.ai.entity.Quiz;
@@ -20,7 +21,7 @@ public class AiDatabaseService {
     private final QuizRepository quizRepository;
 
     @Transactional
-    public void saveAnalysisResult(User user, String prompt, AiResponseDto response) {
+    public AiResponseDto saveAnalysisResult(User user, String prompt, AiResponseDto response) {
         AiHistory history = AiHistory.builder()
                 .user(user)
                 .userPrompt(prompt)
@@ -31,21 +32,45 @@ public class AiDatabaseService {
         AiHistory savedHistory = aiHistoryRepository.save(history);
         log.info(">>> AiHistory 저장 완료: {}", savedHistory.getId());
 
-        response.getQuiz().ifPresent(quizDto -> {
+        if (response.hasQuiz()) {
             try {
+                AiQuizDto originalQuizDto = response.quizDto();
+
                 Quiz quiz = Quiz.builder()
                         .aiHistory(savedHistory)
-                        .question(quizDto.question())
-                        .options(quizDto.options())
-                        .answer(quizDto.answer())
+                        .question(originalQuizDto.question())
+                        .options(originalQuizDto.options())
+                        .answer(originalQuizDto.answer())
                         .build();
-                quizRepository.save(quiz);
-                log.info(">>> Quiz 저장 완료");
+
+                Quiz savedQuiz = quizRepository.save(quiz);
+                log.info(">>> Quiz 저장 완료: ID {}", savedQuiz.getId());
+
+                AiQuizDto updatedQuizDto = new AiQuizDto(
+                        savedQuiz.getId(),
+                        originalQuizDto.question(),
+                        originalQuizDto.options(),
+                        originalQuizDto.answer()
+                );
+
+                // 기존 데이터에 새로운 AiQuizDto를 끼워넣어 반환
+                return new AiResponseDto(
+                        response.filename(),
+                        response.userPrompt(),
+                        response.mode(),
+                        response.extractedText(),
+                        response.description(),
+                        updatedQuizDto,
+                        response.dbStatus()
+                );
+
             } catch (Exception e) {
                 log.error("!!! Quiz 저장 실패: {}", e.getMessage());
                 throw new RuntimeException("Quiz 저장에 실패했습니다.", e);
             }
-        });
+        }
+
+        return response;
     }
 }
 

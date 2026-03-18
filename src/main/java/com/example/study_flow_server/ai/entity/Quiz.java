@@ -37,8 +37,7 @@ public class Quiz {
     private String answer;
 
     public AiQuizDto toAiQuizDto() {
-        // 새로운 ArrayList로 복사하여 LazyInitializationException 방지
-        return new AiQuizDto(this.question, new ArrayList<>(this.options), this.answer);
+        return new AiQuizDto(this.id,this.question, new ArrayList<>(this.options), this.answer);
     }
 
     @Builder

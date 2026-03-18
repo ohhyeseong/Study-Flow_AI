@@ -32,7 +32,7 @@ function MainPage() {
         setChatHistory([]);
       }
     } catch (err) {
-      console.error("히스토리 불러오기 실패:", err);
+      console.error(err);
       setChatHistory([]);
       if (err.response?.status === 401 || err.response?.status === 403) {
         localStorage.removeItem('token');
@@ -92,17 +92,49 @@ function MainPage() {
         const updated = [...prev];
         const lastIndex = updated.length - 1;
         if (updated[lastIndex].isNew) {
-            updated[lastIndex] = { ...updated[lastIndex], ...data, aiResponse: data.description, isNew: false };
+            updated[lastIndex] = {
+                ...updated[lastIndex],
+                ...data,
+                aiResponse: data.description,
+                quizDto: data.quizDto,
+                isNew: false
+            };
         }
         return updated;
       });
 
     } catch (err) {
-      console.error("분석 실패:", err);
+      console.error(err);
       alert("AI 분석 중 오류가 발생했습니다.");
       setChatHistory(prev => prev.slice(0, prev.length - 1));
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleQuizSubmit = async (option) => {
+    if (!currentQuiz || !currentQuiz.quizId) {
+      alert("퀴즈 정보를 찾을 수 없습니다.");
+      return;
+    }
+    if (isCorrect !== null) return;
+
+    setUserAnswer(option);
+
+    const correct = option === currentQuiz.answer;
+    setIsCorrect(correct);
+
+    try {
+      const response = await apiClient.post(`/api/ai/quiz/submit`, {
+        quizId: currentQuiz.quizId,
+        userAnswer: option
+      });
+
+      const updatedHistory = response.data.data;
+      setChatHistory(updatedHistory);
+    } catch (err) {
+      console.error(err);
+      alert("퀴즈 제출 중 오류가 발생했습니다.");
     }
   };
 
@@ -133,7 +165,12 @@ function MainPage() {
                       </div>
                       {chat.quizDto && (
                         <button
-                          onClick={() => { setCurrentQuiz(chat.quizDto); setShowQuiz(true); setIsCorrect(null); setUserAnswer(null); }}
+                          onClick={() => {
+                            setCurrentQuiz(chat.quizDto);
+                            setShowQuiz(true);
+                            setIsCorrect(null);
+                            setUserAnswer(null);
+                          }}
                           style={styles.quizOpenBtn}
                         >
                           📝 관련 퀴즈 풀기
@@ -179,7 +216,7 @@ function MainPage() {
                 {currentQuiz.options.map((opt, idx) => (
                   <button
                     key={idx}
-                    onClick={() => { setUserAnswer(opt); setIsCorrect(opt === currentQuiz.answer); }}
+                    onClick={() => handleQuizSubmit(opt)}
                     style={styles.optionBtn(userAnswer === opt, isCorrect, opt === currentQuiz.answer)}
                   >
                     {opt}
@@ -188,7 +225,7 @@ function MainPage() {
               </div>
               {isCorrect !== null && (
                 <p style={{marginTop:'15px', color: isCorrect ? '#28a745' : '#dc3545', fontWeight:'bold'}}>
-                  {isCorrect ? "정답입니다! 👏" : `틀렸습니다. 정답: ${currentQuiz.answer}`}
+                  {isCorrect ? "정답입니다! 👏" : "틀렸습니다. 오답노트에 추가되었습니다."}
                 </p>
               )}
               <button onClick={() => setShowQuiz(false)} style={styles.modalCloseBtn}>닫기</button>
@@ -205,35 +242,8 @@ const styles = {
   content: { flex: 1, position: 'relative', overflow: 'hidden' },
   chatWrapper: { display: 'flex', flexDirection: 'column', height: '100%', maxWidth: '900px', margin: '0 auto', padding: '10px 20px 20px 20px' },
   chatBox: { flex: 1, overflowY: 'auto', padding: '20px', backgroundColor: '#fff', borderRadius: '20px', border: '1px solid #eef2f6', marginBottom: '10px', display: 'flex', flexDirection: 'column' },
-
-  chatRow: (isUser) => ({
-      display: 'flex',
-      justifyContent: isUser ? 'flex-end' : 'flex-start',
-      marginBottom: '15px',
-      width: '100%'
-    }),
-
-  bubble: (isUser) => ({
-      padding: '12px 18px',
-      borderRadius: isUser ? '20px 20px 0 20px' : '20px 20px 20px 0',
-      maxWidth: '80%',
-      backgroundColor: isUser ? '#4285F4' : '#f1f3f5',
-      color: isUser ? '#fff' : '#333',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-      lineHeight: '1.6'
-    }),
-
-    optionBtn: (isSelected, isCorrect, isAnswer) => ({
-        padding: '12px',
-        borderRadius: '10px',
-        border: '1px solid #ddd',
-        cursor: 'pointer',
-        width: '100%',
-        marginBottom: '5px',
-        backgroundColor: isSelected ? (isCorrect ? '#d4edda' : '#f8d7da') : (isCorrect !== null && isAnswer ? '#d4edda' : '#fff'),
-        borderColor: isSelected ? (isCorrect ? '#28a745' : '#dc3545') : '#ddd'
-      }),
-
+  chatRow: (isUser) => ({ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: '15px', width: '100%' }),
+  bubble: (isUser) => ({ padding: '12px 18px', borderRadius: isUser ? '20px 20px 0 20px' : '20px 20px 20px 0', maxWidth: '80%', backgroundColor: isUser ? '#4285F4' : '#f1f3f5', color: isUser ? '#fff' : '#333', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', lineHeight: '1.6' }),
   image: { maxWidth: '100%', maxHeight: '300px', borderRadius: '10px', marginBottom: '10px', display: 'block' },
   quizOpenBtn: { marginTop: '10px', padding: '8px 12px', backgroundColor: '#fff', border: '1px solid #4285F4', color: '#4285F4', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
   inputArea: { display: 'flex', gap: '10px', backgroundColor: '#fff', padding: '10px 25px', borderRadius: '35px', boxShadow: '0 4px 15px rgba(0,0,0,0.08)', alignItems: 'center' },

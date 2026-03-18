@@ -28,11 +28,13 @@ public class QuizService {
 
         boolean isCorrect = quiz.getAnswer().equals(request.userAnswer());
 
+        SolveStatus status = isCorrect ? SolveStatus.CORRECT : SolveStatus.WRONG;
+
         QuizResult result = QuizResult.builder()
                 .user(user)
                 .quiz(quiz)
                 .userAnswer(request.userAnswer())
-                .status(isCorrect ? SolveStatus.CORRECT : SolveStatus.WRONG)
+                .status(status)
                 .build();
 
         quizResultRepository.save(result);
