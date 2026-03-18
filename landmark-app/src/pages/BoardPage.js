@@ -18,8 +18,8 @@ const BoardPage = () => {
     const fetchPosts = async () => {
         try {
             const response = await apiClient.get('/api/posts/list');
-            // 서버 응답 구조가 [{}, {}] 배열 형태이므로 response.data를 직접 세팅
-            setPosts(response.data || []);
+            const data = response.data?.data || response.data || [];
+            setPosts(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('목록 불러오기 실패:', error);
             setPosts([]);
@@ -88,78 +88,84 @@ const BoardPage = () => {
 
                 <div style={styles.scrollArea}>
                     <div style={styles.postList}>
-                        {posts && posts.map(post => (
-                            <div key={post.id} style={styles.postCard}>
-                                <h3 style={styles.postTitle}>{post.title}</h3>
-                                <p style={styles.postContent}>{post.content}</p>
-                                <div style={styles.postMeta}>
-                                    작성자: {post.authorName} | {new Date(post.createdAt).toLocaleDateString()}
-                                </div>
+                        {Array.isArray(posts) && posts.length > 0 ? (
+                            posts.map(post => (
+                                <div key={post.id} style={styles.postCard}>
+                                    <h3 style={styles.postTitle}>{post.title}</h3>
+                                    <p style={styles.postContent}>{post.content}</p>
+                                    <div style={styles.postMeta}>
+                                        작성자: {post.authorName} | {new Date(post.createdAt).toLocaleDateString()}
+                                    </div>
 
-                                <div style={styles.commentSection}>
-                                    <h4>댓글 ({post.comments?.length || 0})</h4>
+                                    <div style={styles.commentSection}>
+                                        <h4>댓글 ({post.comments?.length || 0})</h4>
 
-                                    {post.comments && post.comments
-                                        .filter(comment => !comment.parent && !comment.parentId) // 최상위 부모 댓글만 먼저 루프
-                                        .map(comment => (
-                                            <div key={comment.id} style={styles.commentItem}>
-                                                <div style={styles.commentMain}>
-                                                    <strong>{comment.authorName}:</strong> {comment.content}
-                                                    <button
-                                                        style={styles.replyButton}
-                                                        onClick={() => setActiveReplyId(activeReplyId === comment.id ? null : comment.id)}
-                                                    >
-                                                        {activeReplyId === comment.id ? '취소' : '답글'}
-                                                    </button>
+                                        {Array.isArray(post.comments) && post.comments
+                                            .filter(comment => !comment.parent && !comment.parentId)
+                                            .map(comment => (
+                                                <div key={comment.id} style={styles.commentItem}>
+                                                    <div style={styles.commentMain}>
+                                                        <strong>{comment.authorName}:</strong> {comment.content}
+                                                        <button
+                                                            style={styles.replyButton}
+                                                            onClick={() => setActiveReplyId(activeReplyId === comment.id ? null : comment.id)}
+                                                        >
+                                                            {activeReplyId === comment.id ? '취소' : '답글'}
+                                                        </button>
+                                                    </div>
+
+                                                    {/* 답글 입력창 */}
+                                                    {activeReplyId === comment.id && (
+                                                        <div style={styles.replyInputWrapper}>
+                                                            <input
+                                                                style={styles.replyInput}
+                                                                placeholder="답글 입력 후 엔터..."
+                                                                value={replyInputs[comment.id] || ''}
+                                                                onChange={(e) => setReplyInputs({...replyInputs, [comment.id]: e.target.value})}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                                                                        e.preventDefault();
+                                                                        handleAddReply(post.id, comment.id);
+                                                                    }
+                                                                }}
+                                                                autoFocus
+                                                            />
+                                                        </div>
+                                                    )}
+
+                                                    {/* 대댓글(자식) 출력 영역: 필터 없이 children을 모두 보여줌 */}
+                                                    {Array.isArray(comment.children) && comment.children.map(child => (
+                                                        <div key={child.id} style={styles.replyItem}>
+                                                            <span style={styles.replyArrow}>└</span>
+                                                            <strong>{child.authorName}:</strong> {child.content}
+                                                        </div>
+                                                    ))}
                                                 </div>
+                                            ))
+                                        }
 
-                                                {/* 답글 입력창 */}
-                                                {activeReplyId === comment.id && (
-                                                    <div style={styles.replyInputWrapper}>
-                                                        <input
-                                                            style={styles.replyInput}
-                                                            placeholder="답글 입력 후 엔터..."
-                                                            value={replyInputs[comment.id] || ''}
-                                                            onChange={(e) => setReplyInputs({...replyInputs, [comment.id]: e.target.value})}
-                                                            onKeyDown={(e) => {
-                                                                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-                                                                    e.preventDefault();
-                                                                    handleAddReply(post.id, comment.id);
-                                                                }
-                                                            }}
-                                                            autoFocus
-                                                        />
-                                                    </div>
-                                                )}
-
-                                                {/* 대댓글(자식) 출력 영역: 필터 없이 children을 모두 보여줌 */}
-                                                {comment.children && comment.children.map(child => (
-                                                    <div key={child.id} style={styles.replyItem}>
-                                                        <span style={styles.replyArrow}>└</span>
-                                                        <strong>{child.authorName}:</strong> {child.content}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ))
-                                    }
-
-                                    {/* 새 일반 댓글 입력창 */}
-                                    <input
-                                        type="text"
-                                        placeholder="댓글 입력 후 엔터..."
-                                        value={commentInputs[post.id] || ''}
-                                        onChange={(e) => setCommentInputs({...commentInputs, [post.id]: e.target.value})}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-                                                e.preventDefault();
-                                                handleAddComment(post.id);
-                                            }
-                                        }}
-                                        style={styles.commentInput}
-                                    />
+                                        {/* 새 일반 댓글 입력창 */}
+                                        <input
+                                            type="text"
+                                            placeholder="댓글 입력 후 엔터..."
+                                            value={commentInputs[post.id] || ''}
+                                            onChange={(e) => setCommentInputs({...commentInputs, [post.id]: e.target.value})}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                                                    e.preventDefault();
+                                                    handleAddComment(post.id);
+                                                }
+                                            }}
+                                            style={styles.commentInput}
+                                        />
+                                    </div>
                                 </div>
+                            ))
+                        ) : (
+                            <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+                                게시글이 없습니다. 첫 번째 게시글을 작성해 보세요!
                             </div>
-                        ))}
+                        )}
                     </div>
                 </div>
             </div>

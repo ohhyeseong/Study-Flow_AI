@@ -1,9 +1,9 @@
 package com.example.study_flow_server.landmark.controller;
 
+import com.example.study_flow_server.global.response.ApiResponse;
 import com.example.study_flow_server.landmark.dto.LandmarkResponseDto;
 import com.example.study_flow_server.landmark.service.LandmarkService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,32 +11,32 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/landmarks")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:3000")
 public class LandmarkController {
     private final LandmarkService landmarkService;
 
     @GetMapping("/nearby")
-    public ResponseEntity<List<LandmarkResponseDto>> getNearby(
+    public ApiResponse<List<LandmarkResponseDto>> getNearby(
             @RequestParam Double lat,
             @RequestParam Double lon) {
-        return ResponseEntity.ok(landmarkService.getNearbyLandmarks(lat, lon));
+        List<LandmarkResponseDto> nearbyLandmarks = landmarkService.getNearbyLandmarks(lat, lon);
+        return ApiResponse.ok(nearbyLandmarks);
     }
-    // ✨ 리액트의 '저장 목록' 버튼을 위해 모든 데이터를 가져오는 API 추가
+    
     @GetMapping
-    public ResponseEntity<List<LandmarkResponseDto>> getAllLandmarks() {
-        // 서비스에 모든 랜드마크를 가져오는 메서드가 있어야 합니다.
-        return ResponseEntity.ok(landmarkService.getAllLandmarks());
+    public ApiResponse<List<LandmarkResponseDto>> getAllLandmarks() {
+        List<LandmarkResponseDto> allLandmarks = landmarkService.getAllLandmarks();
+        return ApiResponse.ok(allLandmarks);
     }
-    // LandmarkController.java
 
     @PostMapping("/register")
-    public ResponseEntity<String> registerLandmark(@RequestBody LandmarkResponseDto landmarkDto) {
-        // 리액트에서 보낸 데이터를 DB에 저장하는 로직
+    public ApiResponse<String> registerLandmark(@RequestBody LandmarkResponseDto landmarkDto) {
         landmarkService.registerLandmark(landmarkDto);
-        return ResponseEntity.ok("랜드마크 등록 성공!");
+        return ApiResponse.ok("랜드마크 등록 성공!");
     }
-    @GetMapping("/{id}")
-    public ResponseEntity<LandmarkResponseDto> getDetail(@PathVariable Long id) {
-        return ResponseEntity.ok(landmarkService.getLandmarkDetail(id));
+    
+    @GetMapping("/{landmarkId}")
+    public ApiResponse<LandmarkResponseDto> getDetail(@PathVariable Long landmarkId) {
+        LandmarkResponseDto landmarkDetail = landmarkService.getLandmarkDetail(landmarkId);
+        return ApiResponse.ok(landmarkDetail);
     }
 }

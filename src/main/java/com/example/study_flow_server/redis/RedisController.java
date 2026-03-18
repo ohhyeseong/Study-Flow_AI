@@ -3,7 +3,6 @@ package com.example.study_flow_server.redis;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-
 import java.time.Duration;
 
 @RestController

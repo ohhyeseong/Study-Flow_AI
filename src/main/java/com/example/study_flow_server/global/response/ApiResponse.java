@@ -18,9 +18,9 @@ public record ApiResponse<T>(
         return new ApiResponse<>(true,"OK","요청이 성공했습니다.", null, null);
     }
     public static ApiResponse<Void> error(ErrorCode errorCode){
-        return new ApiResponse<>(false,errorCode.name(),errorCode.getMassage(), null, null);
+        return new ApiResponse<>(false,errorCode.name(),errorCode.getMessage(), null, null);
     }
     public static ApiResponse<Void> error(ErrorCode errorCode, Map<String, String> errors){
-        return new ApiResponse<>(false,errorCode.name(),errorCode.getMassage(), null, errors);
+        return new ApiResponse<>(false,errorCode.name(),errorCode.getMessage(), null, errors);
     }
 }

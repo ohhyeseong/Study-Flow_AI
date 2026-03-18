@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
@@ -37,10 +37,10 @@ function MapPage() {
     }
   }, []);
 
-  const fetchAndShowSavedLandmarks = async () => {
+  const fetchAndShowSavedLandmarks = useCallback(async () => {
     try {
       const response = await axios.get('http://localhost:8090/api/v1/landmarks');
-      const data = response.data;
+      const data = response.data.data;
       setSavedLandmarks(data);
       setShowSaved(true);
 
@@ -66,9 +66,9 @@ function MapPage() {
     } catch (error) {
       alert("저장된 장소를 가져오지 못했습니다.");
     }
-  };
+  }, [mapObj, markers]);
 
-  const handleAIRecommendation = () => {
+  const handleAIRecommendation = useCallback(() => {
     if (isLoading) return;
     const finalQuery = customPrompt.trim() || "주변 가볼만한 곳을 추천하고 각 장소의 특징을 설명해줘";
     setAiResult(null);
@@ -85,11 +85,11 @@ function MapPage() {
             places: placeDetails,
             userQuery: finalQuery + " (반드시 주소 정보를 포함해서 답변해줘)"
           });
-          setAiResult(response.data.answer);
+          setAiResult(response.data.data.answer || response.data.answer);
         } catch (err) { alert("AI 서버 연결 실패!"); } finally { setIsLoading(false); }
       }
     }, { location: new window.kakao.maps.LatLng(currentPos.lat, currentPos.lon), radius: 2000 });
-  };
+  }, [customPrompt, currentPos, isLoading]);
 
   const openRoute = (place) => {
     const url = `https://map.kakao.com/link/to/${place.name},${place.latitude},${place.longitude}`;
@@ -108,6 +108,14 @@ function MapPage() {
       fetchAndShowSavedLandmarks();
     } catch (error) { alert("❌ 저장 실패"); }
   };
+
+  // 로그인 상태 체크 임시 추가 (사용하지 않던 navigate 활용)
+  useEffect(() => {
+      const token = localStorage.getItem('token');
+      if (!token || token === "undefined") {
+        navigate('/login');
+      }
+  }, [navigate]);
 
   return (
     <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -133,7 +141,6 @@ function MapPage() {
           </div>
         </div>
 
-        {/* 사이드바: 추천 목록 */}
         {showSaved && (
           <div style={sidebarStyle}>
             <div style={{display:'flex', justifyContent:'space-between', marginBottom:'10px'}}>
@@ -157,7 +164,6 @@ function MapPage() {
           </div>
         )}
 
-        {/* 정보 카드: 저장된 장소 정보 */}
         {selectedPlace && (
           <div style={resultCardStyle}>
             <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px', color: '#34a853' }}>📍 저장된 장소 정보</div>
@@ -173,7 +179,6 @@ function MapPage() {
           </div>
         )}
 
-        {/* 정보 카드: AI 추천 결과 */}
         {aiResult && (
           <div style={resultCardStyle}>
             <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px', color: '#4285F4' }}>🤖 AI 가이드 추천</div>
@@ -190,7 +195,6 @@ function MapPage() {
   );
 }
 
-// 스타일 정의
 const actionButtonStyle = (bg, color) => ({ flex: 1, padding: '10px', backgroundColor: bg, color: color, border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' });
 const aiInputAreaStyle = { position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 100, display: 'flex', flexDirection: 'column', gap: '10px', width: '90%', maxWidth: '600px' };
 const inputStyle = { padding: '15px 20px', borderRadius: '30px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.2)', outline: 'none' };

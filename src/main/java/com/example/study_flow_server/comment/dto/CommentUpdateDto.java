@@ -9,6 +9,6 @@ public record CommentUpdateDto(
         @Size(max =30, message = "내용은 30글자 제한입니다.")
         String content,
 
-        Long parentId // 대댓글일 경우 부모 댓글 ID, 원댓글이면 null
+        Long parentId
 ) {
 }

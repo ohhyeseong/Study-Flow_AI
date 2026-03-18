@@ -48,7 +48,6 @@ public class Comment extends BaseEntity {
         this.parent = parent;
     }
 
-    // 댓글 수정 메서드
     public void update(String content) {
         this.content = content;
     }

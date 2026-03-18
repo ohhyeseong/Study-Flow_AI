@@ -21,17 +21,13 @@ public class QuizService {
     private final QuizRepository quizRepository;
     private final QuizResultRepository quizResultRepository;
 
-
     @Transactional
     public boolean submitAnswer(User user, QuizSubmitRequest request) {
-        // 1. 문제 찾기
         Quiz quiz = quizRepository.findById(request.quizId())
                 .orElseThrow(() -> new CustomException(ErrorCode.QUIZ_NOT_FOUND));
 
-        // 2. 채점 (정답 번호 비교)
         boolean isCorrect = quiz.getAnswer().equals(request.userAnswer());
 
-        // 3. 결과 저장 (오답 노트의 원천 데이터)
         QuizResult result = QuizResult.builder()
                 .user(user)
                 .quiz(quiz)

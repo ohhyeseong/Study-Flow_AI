@@ -8,21 +8,18 @@ const SignUpPage = () => {
     const [nickname, setNickname] = useState('');
     const [email, setEmail] = useState('');
 
-    // 이메일 인증 관련 상태
     const [verificationCode, setVerificationCode] = useState('');
     const [isEmailSent, setIsEmailSent] = useState(false);
     const [isEmailVerified, setIsEmailVerified] = useState(false);
 
     const navigate = useNavigate();
 
-    // 1. 이메일 인증번호 전송
     const handleSendVerification = async () => {
         if (!email) {
             alert("이메일을 입력해주세요.");
             return;
         }
         try {
-            // 백엔드 API 호출 (POST /api/auth/email-send?email=...)
             await apiClient.post(`/api/auth/email-send?email=${email}`);
             alert("인증번호가 이메일로 전송되었습니다. 확인해주세요.");
             setIsEmailSent(true);
@@ -32,14 +29,12 @@ const SignUpPage = () => {
         }
     };
 
-    // 2. 이메일 인증번호 확인
     const handleVerifyCode = async () => {
         if (!verificationCode) {
             alert("인증번호를 입력해주세요.");
             return;
         }
         try {
-            // 백엔드 API 호출 (POST /api/auth/email-verify?email=...&code=...)
             await apiClient.post(`http://localhost:8090/api/auth/email-verify?email=${email}&code=${verificationCode}`);
             alert("이메일 인증이 완료되었습니다!");
             setIsEmailVerified(true);
@@ -49,7 +44,6 @@ const SignUpPage = () => {
         }
     };
 
-    // 3. 회원가입 요청
     const handleSignUp = async (e) => {
         e.preventDefault();
 
@@ -58,7 +52,6 @@ const SignUpPage = () => {
             return;
         }
 
-        // 유효성 검사
         if (username.length < 4 || username.length > 20) {
             alert("아이디는 4~20자 사이여야 합니다.");
             return;
@@ -74,7 +67,7 @@ const SignUpPage = () => {
                 password: password,
                 nickname: nickname,
                 email: email,
-                authCode: "VERIFIED_USER" // 인증 완료된 사용자임을 표시 (백엔드 로직에 따라 수정 필요할 수 있음)
+                authCode: "VERIFIED_USER"
             });
 
             if (response.status === 200 || response.status === 201) {
@@ -139,7 +132,6 @@ const SignUpPage = () => {
                         />
                     </div>
 
-                    {/* 이메일 입력 및 인증 버튼 */}
                     <div style={styles.inputGroup}>
                         <label htmlFor="email" style={styles.label}>이메일</label>
                         <div style={{ display: 'flex', gap: '10px' }}>
@@ -150,7 +142,7 @@ const SignUpPage = () => {
                                 onChange={(e) => setEmail(e.target.value)}
                                 style={{ ...styles.input, flex: 1 }}
                                 required
-                                disabled={isEmailVerified} // 인증 완료 시 수정 불가
+                                disabled={isEmailVerified}
                             />
                             <button
                                 type="button"
@@ -163,7 +155,6 @@ const SignUpPage = () => {
                         </div>
                     </div>
 
-                    {/* 인증번호 입력 (이메일 전송 후 표시) */}
                     {isEmailSent && !isEmailVerified && (
                         <div style={styles.inputGroup}>
                             <label htmlFor="verificationCode" style={styles.label}>인증번호</label>
@@ -203,7 +194,6 @@ const SignUpPage = () => {
     );
 };
 
-// 스타일 정의
 const styles = {
     container: {
         display: 'flex',

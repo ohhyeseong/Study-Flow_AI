@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@NoArgsConstructor(access = AccessLevel.PROTECTED) // PROTECTED 이상만 접근가능 new User처럼 아무런 객체 없이 접근하는것을 차단
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 @Table(name ="users")
 public class User {
@@ -32,8 +32,6 @@ public class User {
     @Column(nullable = false)
     private UserRole role;
 
-
-
     @Builder
     public User(Long id,String username , String nickname , String email , String password , UserRole role){
         this.id = id;
@@ -44,18 +42,8 @@ public class User {
         this.role = role;
     }
 
-    //닉네임 변경
-
     public void updateNickname(String newNickname){
         this.nickname = newNickname;
     }
-
-
-
-
-
-
-
-
 
 }

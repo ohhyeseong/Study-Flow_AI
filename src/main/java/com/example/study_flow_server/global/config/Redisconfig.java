@@ -20,7 +20,6 @@ public class Redisconfig {
 
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
-        // Lettuce를 사용하여 연결 팩토리 생성
         return new LettuceConnectionFactory(host, port);
     }
 
@@ -29,13 +28,10 @@ public class Redisconfig {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory());
 
-        // Key는 StringSerializer 사용
         redisTemplate.setKeySerializer(new StringRedisSerializer());
 
-        // Value는 JSON Serializer 사용 (객체를 JSON 문자열로 변환하여 저장)
         redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
 
-        // Hash를 사용할 경우의 설정
         redisTemplate.setHashKeySerializer(new StringRedisSerializer());
         redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
 

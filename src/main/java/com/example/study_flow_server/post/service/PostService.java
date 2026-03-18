@@ -1,5 +1,7 @@
 package com.example.study_flow_server.post.service;
 
+import com.example.study_flow_server.global.exception.CustomException;
+import com.example.study_flow_server.global.exception.ErrorCode;
 import com.example.study_flow_server.post.domain.Post;
 import com.example.study_flow_server.post.dto.PostCreateDto;
 import com.example.study_flow_server.post.dto.PostResponseDto;
@@ -21,61 +23,59 @@ public class PostService {
     private final PostRepository postRepository;
     private final UserRepository userRepository;
 
-    //게시글 생성
     public Long createPost(PostCreateDto dto, String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        User author = userRepository.findByUsername(username)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        Post post = Post.builder()
+        Post newPost = Post.builder()
                 .title(dto.title())
                 .content(dto.content())
-                .user(user)
+                .user(author)
                 .build();
 
-        return postRepository.save(post).getId();
+        return postRepository.save(newPost).getId();
     }
 
-    // 게시글 수정
-    public Long updatePost(Long id, PostCreateDto dto, String username) {
-        // 1. 게시글 조회
-        Post post = postRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 존재하지 않습니다. id=" + id));
+    public Long updatePost(Long postId, PostCreateDto dto, String username) {
+        Post existingPost = findPostById(postId);
 
-        // 2. 작성자 검증 (현재 로그인한 유저와 게시글 작성자가 같은지)
-        if (!post.getUser().getUsername().equals(username)) {
-            throw new IllegalArgumentException("수정 권한이 없습니다.");
-        }
+        validateAuthor(existingPost, username);
 
-        // 3. 수정 실행 (Dirty Checking으로 인해 save 호출 불필요)
-        post.update(dto.title(), dto.content());
+        existingPost.update(dto.title(), dto.content());
 
-        return id;
+        return postId;
     }
 
-    //게시글 삭제
-    public PostResponseDto deletePost(Long id) {
-        Post post = postRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 존재하지 않습니다. id=" + id));
+    public PostResponseDto deletePost(Long postId) {
+        Post postToDelete = findPostById(postId);
 
-        PostResponseDto response = PostResponseDto.from(post);
-        postRepository.delete(post);
+        PostResponseDto response = PostResponseDto.from(postToDelete);
+        postRepository.delete(postToDelete);
+        
         return response;
     }
 
-    //게시글 단건 조회
     @Transactional(readOnly = true)
-    public PostResponseDto getPost(Long id) {
-        Post post = postRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 존재하지 않습니다. id=" + id));
+    public PostResponseDto getPost(Long postId) {
+        Post post = findPostById(postId);
         return PostResponseDto.from(post);
     }
 
-    //게시글 전체 조회
     @Transactional(readOnly = true)
     public List<PostResponseDto> getAllPosts() {
-        List<Post> posts = postRepository.findAll();
-        return posts.stream()
+        return postRepository.findAll().stream()
                 .map(PostResponseDto::from)
                 .collect(Collectors.toList());
+    }
+
+    private Post findPostById(Long postId) {
+        return postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 존재하지 않습니다. id=" + postId));
+    }
+
+    private void validateAuthor(Post post, String username) {
+        if (!post.getUser().getUsername().equals(username)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
     }
 }

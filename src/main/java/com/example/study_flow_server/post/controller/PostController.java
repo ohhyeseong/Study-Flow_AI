@@ -1,14 +1,13 @@
 package com.example.study_flow_server.post.controller;
 
 import com.example.study_flow_server.global.exception.CustomException;
+import com.example.study_flow_server.global.response.ApiResponse;
 import com.example.study_flow_server.global.security.CustomUserDetails;
 import com.example.study_flow_server.post.dto.PostCreateDto;
 import com.example.study_flow_server.post.dto.PostResponseDto;
 import com.example.study_flow_server.post.service.PostService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,55 +16,44 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/posts")
-@CrossOrigin(origins = "http://localhost:3000")
-public class
-PostController {
+public class PostController {
 
     private final PostService postService;
 
-    //게시글 생성
     @PostMapping("/create")
-    public ResponseEntity<String> createPost(
+    public ApiResponse<String> createPost(
             @Valid @RequestBody PostCreateDto postCreateDto,
             @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
         postService.createPost(postCreateDto, customUserDetails.getUsername());
-        return ResponseEntity.status(HttpStatus.CREATED).body("게시글이 성공적으로 등록되었습니다.");
+        return ApiResponse.ok("게시글이 성공적으로 등록되었습니다.");
     }
 
-    // 게시글 수정
-    @PutMapping("/{id}")
-    public ResponseEntity<String> updatePost(
-            @PathVariable Long id,
+    @PutMapping("/{postId}")
+    public ApiResponse<String> updatePost(
+            @PathVariable Long postId,
             @Valid @RequestBody PostCreateDto postCreateDto,
             @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
-        try {
-            postService.updatePost(id, postCreateDto, customUserDetails.getUsername());
-            return ResponseEntity.ok("게시글이 성공적으로 수정되었습니다.");
-        } catch (CustomException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
-        }
+        postService.updatePost(postId, postCreateDto, customUserDetails.getUsername());
+        return ApiResponse.ok("게시글이 성공적으로 수정되었습니다.");
     }
 
-    //게시글 삭제
-    @DeleteMapping("/{id}") // PostMapping -> DeleteMapping으로 변경 권장
-    public ResponseEntity<String> deletePost(@PathVariable Long id) {
-        postService.deletePost(id);
-        return ResponseEntity.ok("삭제성공");
+    @DeleteMapping("/{postId}")
+    public ApiResponse<String> deletePost(@PathVariable Long postId) {
+        postService.deletePost(postId);
+        return ApiResponse.ok("삭제성공");
     }
 
-    //게시글 단건 조회
-    @GetMapping("/{id}")
-    public ResponseEntity<PostResponseDto> getPost(@PathVariable Long id) {
-        PostResponseDto response = postService.getPost(id);
-        return ResponseEntity.ok(response);
+    @GetMapping("/{postId}")
+    public ApiResponse<PostResponseDto> getPost(@PathVariable Long postId) {
+        PostResponseDto response = postService.getPost(postId);
+        return ApiResponse.ok(response);
     }
 
-    //게시글 전체 조회
     @GetMapping("/list")
-    public ResponseEntity<List<PostResponseDto>> getAllPost() { // @PathVariable 제거
+    public ApiResponse<List<PostResponseDto>> getAllPost() {
         List<PostResponseDto> responseDto = postService.getAllPosts();
-        return ResponseEntity.ok(responseDto);
+        return ApiResponse.ok(responseDto);
     }
 }

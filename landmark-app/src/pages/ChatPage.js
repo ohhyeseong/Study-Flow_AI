@@ -5,7 +5,6 @@ import { Stomp } from '@stomp/stompjs';
 import Header from '../components/Header';
 
 const ChatPage = () => {
-    const [chatHistory, setChatHistory] = useState([]);
     const [rooms, setRooms] = useState([]);
     const [currentRoom, setCurrentRoom] = useState(null);
     const [messages, setMessages] = useState([]);
@@ -22,8 +21,7 @@ const ChatPage = () => {
     const fetchRooms = async () => {
         try {
             const response = await apiClient.get('/api/chat/rooms');
-            setChatHistory(response.data);
-            setRooms(response.data);
+            setRooms(response.data.data || response.data);
         } catch (error) {
             console.error('채팅방 목록 불러오기 실패:', error);
         }
@@ -56,15 +54,14 @@ const ChatPage = () => {
     };
 
     const connectStomp = (roomId) => {
-        const token = localStorage.getItem('token'); // 로컬 스토리지에서 토큰 가져오기
+        const token = localStorage.getItem('token');
 
-        // 백엔드 포트 및 엔드포인트 확인 필요 (8090/ws-chat)
         const socket = new SockJS('http://localhost:8090/ws-chat');
         stompClient.current = Stomp.over(socket);
 
         const connectHeaders = {};
             if (token) {
-                connectHeaders['Authorization'] = `Bearer ${token}`; // 토큰이 있으면 헤더에 추가
+                connectHeaders['Authorization'] = `Bearer ${token}`;
             }
 
         stompClient.current.connect(connectHeaders, () => {
@@ -97,11 +94,10 @@ const ChatPage = () => {
 
     return (
         <div style={styles.layout}>
-            <Header /> {/* 🔵 공통 헤더 추가 */}
+            <Header />
 
             <div style={styles.container}>
                 {!currentRoom ? (
-                    /* 🟢 채팅방 목록 화면 */
                     <>
                         <div style={styles.listHeader}>
                             <h2 style={styles.title}>💬 채팅방 목록</h2>
@@ -130,7 +126,6 @@ const ChatPage = () => {
                         </div>
                     </>
                 ) : (
-                    /* 🟡 실제 채팅 화면 */
                     <div style={styles.chatWrapper}>
                         <div style={styles.chatHeader}>
                             <h3 style={styles.chatTitle}>{currentRoom.title}</h3>
