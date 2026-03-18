@@ -26,11 +26,11 @@ public class QuizResult extends BaseEntity {
     private Quiz quiz;
 
     @Column(nullable = false)
-    private String userAnswer; // 사용자가 제출한 답
+    private String userAnswer;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private SolveStatus status; // CORRECT 또는 WRONG
+    private SolveStatus status;
 
     @Builder
     public QuizResult(User user, Quiz quiz, String userAnswer, SolveStatus status){

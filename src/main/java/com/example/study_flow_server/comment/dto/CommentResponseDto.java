@@ -11,7 +11,7 @@ public record CommentResponseDto(
         String content,
         String authorName,
         LocalDateTime createdAt,
-        List<CommentResponseDto> children // 대댓글 리스트
+        List<CommentResponseDto> children
 ) {
     public static CommentResponseDto from(Comment comment) {
         return new CommentResponseDto(

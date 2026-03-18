@@ -10,16 +10,14 @@ public enum ErrorCode {
 
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다.!"),
 
-    // 403
     FORBIDDEN(HttpStatus.FORBIDDEN, "사용자 권한이 없습니다."),
 
-    //401
+    INVALID_CODE(HttpStatus.UNAUTHORIZED, "이메일 인증 코드가 일치하지 않습니다."),
+
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증 권한이 없습니다.(로그인을 진행해주세요)"),
 
-    // 409
     CONFLICT_USERNAME(HttpStatus.CONFLICT, "중복된 값이 있습니다."),
 
-    // 404
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."),
 
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다."),
@@ -30,18 +28,16 @@ public enum ErrorCode {
 
     QUIZ_NOT_FOUND(HttpStatus.NOT_FOUND, "퀴즈를 찾을 수 없습니다."),
 
-    // 500
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류입니다."),
 
-    // AI Server Error
     AI_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "AI 서버와 통신 중 오류가 발생했습니다."),
     IMAGE_PROCESSING_ERROR(HttpStatus.BAD_REQUEST, "이미지 처리 중 오류가 발생했습니다.");
 
     private final HttpStatus httpStatus;
-    private final String massage;
+    private final String message;
 
-    ErrorCode(HttpStatus httpStatus, String massage){
+    ErrorCode(HttpStatus httpStatus, String message){
         this.httpStatus = httpStatus;
-        this.massage = massage;
+        this.message = message;
     }
 }

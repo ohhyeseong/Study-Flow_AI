@@ -9,12 +9,12 @@ import org.springframework.data.redis.core.index.Indexed;
 
 @Getter
 @AllArgsConstructor
-@RedisHash(value = "refreshToken", timeToLive = 60 * 60 * 24 * 14) // 14일 (초 단위)
+@RedisHash(value = "refreshToken", timeToLive = 60 * 60 * 24 * 14)
 public class RefreshToken {
 
-    @Id // 레디스의 Key가 됨 (예: refreshToken:유저ID)
+    @Id
     private String userId;
 
-    @Indexed // 토큰 값으로도 데이터를 찾고 싶을 때 붙임
+    @Indexed
     private String token;
 }

@@ -30,7 +30,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        // 클라이언트로부터 들어오는 메시지를 처리하기 전에 StompHandler가 가로채도록 설정
         registration.interceptors(stompHandler);
     }
 }

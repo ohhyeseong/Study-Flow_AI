@@ -20,22 +20,21 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
-@ExtendWith(MockitoExtension.class) // JUnit5에서 Mockito를 사용하기 위한 설정
+@ExtendWith(MockitoExtension.class)
 class QuizServiceTest {
 
-    @InjectMocks // 테스트 대상 클래스. @Mock으로 생성된 객체들이 여기에 주입된다.
+    @InjectMocks
     private QuizService quizService;
 
-    @Mock // 가짜(Mock) 객체로 만들 의존성
+    @Mock
     private QuizRepository quizRepository;
 
-    @Mock // 가짜(Mock) 객체로 만들 의존성
+    @Mock
     private QuizResultRepository quizResultRepository;
 
     @Test
     @DisplayName("퀴즈 정답 제출 - 정답인 경우")
     void submitAnswer_Correct() {
-        // given - 테스트를 위한 준비 과정
         Long quizId = 1L;
         String correctAnswer = "2";
         User user = User.builder().id(1L).username("testuser").build();
@@ -47,23 +46,18 @@ class QuizServiceTest {
                 .answer(correctAnswer)
                 .build();
 
-        // quizRepository.findById(quizId)가 호출되면, 위에서 만든 quiz 객체를 포함한 Optional을 반환하도록 설정
         given(quizRepository.findById(quizId)).willReturn(Optional.of(quiz));
 
-        // when - 실제 테스트 대상 메소드 호출
         boolean isCorrect = quizService.submitAnswer(user, request);
 
-        // then - 결과 검증
-        assertThat(isCorrect).isTrue(); // 반환값이 true인지 확인
+        assertThat(isCorrect).isTrue();
 
-        // quizResultRepository.save()가 한 번 호출되었는지 검증
         verify(quizResultRepository).save(any(QuizResult.class));
     }
 
     @Test
     @DisplayName("퀴즈 정답 제출 - 오답인 경우")
     void submitAnswer_Wrong() {
-        // given - 테스트를 위한 준비 과정
         Long quizId = 1L;
         String correctAnswer = "2";
         String wrongAnswer = "3";
@@ -76,16 +70,12 @@ class QuizServiceTest {
                 .answer(correctAnswer)
                 .build();
 
-        // quizRepository.findById(quizId)가 호출되면, 위에서 만든 quiz 객체를 포함한 Optional을 반환하도록 설정
         given(quizRepository.findById(quizId)).willReturn(Optional.of(quiz));
 
-        // when - 실제 테스트 대상 메소드 호출
         boolean isCorrect = quizService.submitAnswer(user, request);
 
-        // then - 결과 검증
-        assertThat(isCorrect).isFalse(); // 반환값이 false인지 확인
+        assertThat(isCorrect).isFalse();
 
-        // quizResultRepository.save()가 한 번 호출되었는지 검증
         verify(quizResultRepository).save(any(QuizResult.class));
     }
 }

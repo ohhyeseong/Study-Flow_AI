@@ -10,7 +10,7 @@ public class WebClientConfig {
     @Bean
     public WebClient webClient() {
         return WebClient.builder()
-                .baseUrl("http://localhost:8000") // 파이썬 서버
+                .baseUrl("http://localhost:8000")
                 .build();
     }
 }

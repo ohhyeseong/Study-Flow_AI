@@ -1,5 +1,6 @@
 package com.example.study_flow_server.ai.service;
 
+import com.example.study_flow_server.ai.dto.AiQuizDto;
 import com.example.study_flow_server.ai.dto.AiResponseDto;
 import com.example.study_flow_server.ai.entity.AiHistory;
 import com.example.study_flow_server.ai.entity.Quiz;
@@ -20,35 +21,56 @@ public class AiDatabaseService {
     private final QuizRepository quizRepository;
 
     @Transactional
-    public void saveAnalysisResult(User user, String prompt, AiResponseDto response) {
-        // 파싱 로직을 모두 제거하고, DTO의 필드를 직접 사용한다.
+    public AiResponseDto saveAnalysisResult(User user, String prompt, AiResponseDto response) {
         AiHistory history = AiHistory.builder()
                 .user(user)
                 .userPrompt(prompt)
-                .aiResponse(response.description()) // 파싱된 설명 사용
+                .aiResponse(response.description())
                 .imageUrl(response.filename())
                 .build();
 
         AiHistory savedHistory = aiHistoryRepository.save(history);
         log.info(">>> AiHistory 저장 완료: {}", savedHistory.getId());
 
-        // DTO의 헬퍼 메소드를 사용하여 퀴즈 존재 여부를 확인하고 저장한다.
-        response.getQuiz().ifPresent(quizDto -> {
+        if (response.hasQuiz()) {
             try {
+                AiQuizDto originalQuizDto = response.quizDto();
+
                 Quiz quiz = Quiz.builder()
-                        .aiHistory(history) // 먼저 메모리상에서 관계를 설정
-                        .question(quizDto.question())
-                        .options(quizDto.options())
-                        .answer(quizDto.answer())
+                        .aiHistory(savedHistory)
+                        .question(originalQuizDto.question())
+                        .options(originalQuizDto.options())
+                        .answer(originalQuizDto.answer())
                         .build();
-                quizRepository.save(quiz);
-                log.info(">>> Quiz 저장 완료");
+
+                Quiz savedQuiz = quizRepository.save(quiz);
+                log.info(">>> Quiz 저장 완료: ID {}", savedQuiz.getId());
+
+                AiQuizDto updatedQuizDto = new AiQuizDto(
+                        savedQuiz.getId(),
+                        originalQuizDto.question(),
+                        originalQuizDto.options(),
+                        originalQuizDto.answer()
+                );
+
+                // 기존 데이터에 새로운 AiQuizDto를 끼워넣어 반환
+                return new AiResponseDto(
+                        response.filename(),
+                        response.userPrompt(),
+                        response.mode(),
+                        response.extractedText(),
+                        response.description(),
+                        updatedQuizDto,
+                        response.dbStatus()
+                );
+
             } catch (Exception e) {
-                // Quiz 저장 실패 시, 로그를 남기고 예외를 던져 트랜잭션을 롤백시킨다.
                 log.error("!!! Quiz 저장 실패: {}", e.getMessage());
                 throw new RuntimeException("Quiz 저장에 실패했습니다.", e);
             }
-        });
+        }
+
+        return response;
     }
 }
 

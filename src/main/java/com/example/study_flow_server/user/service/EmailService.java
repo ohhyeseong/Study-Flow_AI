@@ -2,55 +2,70 @@ package com.example.study_flow_server.user.service;
 
 import com.example.study_flow_server.redis.RedisService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
 public class EmailService {
-    // JavaMailSender 스프링에서 제공하는 메일 발송 인터페이스
+
     private final JavaMailSender mailSender;
     private final RedisService redisService;
 
-    // 이메일 인증 코드의 유효 기간 (예: 5분) AUTH_CODE_DURATION 수명결정 설정값
-    private final Duration AUTH_CODE_DURATION = Duration.ofMinutes(5);
+    private static final Duration VERIFICATION_CODE_EXPIRATION = Duration.ofMinutes(5);
+    private static final Duration SIGNUP_TICKET_EXPIRATION = Duration.ofHours(10);
+    private static final String REDIS_AUTH_PREFIX = "AUTH:";
+    private static final String REDIS_DONE_PREFIX = "DONE:";
 
-    // 1. 인증 번호 생성 및 발송 최소값 100000 으로 지정후 6자리 난수 생성
-    public void sendVerificationCode(String email) {
-        String authCode = String.valueOf((int)(Math.random() * 899999) + 100000); // 6자리 난수
+    @Value("${spring.mail.username}")
+    private String senderEmail;
 
-        // Redis에 저장 (Key: 이메일, Value: 인증코드)
-        // 기존에 만드신 setValues 메서드 활용
-        redisService.setValues("AUTH:" + email, authCode, AUTH_CODE_DURATION);
+    public void sendVerificationCode(String targetEmail) {
+        String verificationCode = generateSixDigitCode();
+        String redisKey = REDIS_AUTH_PREFIX + targetEmail;
 
-        // 실제 메일 발송 로직
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom("jminhyeog@gmail.com"); // 발신자 이메일
-        message.setTo(email); //  수신자 이메일
-        message.setSubject("인증번호 확인");//메일 제목
-        message.setText("인증번호는 [" + authCode + "] 입니다."); //  이건 누가봐도
-        mailSender.send(message); //메일전송
+        redisService.setValues(redisKey, verificationCode, VERIFICATION_CODE_EXPIRATION);
+
+        SimpleMailMessage mailMessage = createVerificationMailMessage(targetEmail, verificationCode);
+        mailSender.send(mailMessage);
     }
 
-    public boolean verifyCode(String email, String inputCode) {
-        String authKey = "AUTH:" + email;
-        String savedCode = redisService.getValues(authKey);
+    public boolean verifyCode(String email, String userProvidedCode) {
+        String redisKey = REDIS_AUTH_PREFIX + email;
+        String storedVerificationCode = redisService.getValues(redisKey);
 
-        // 1. 여기서 5분 컷! (메일 발송 시 설정한 5분이 지나면 savedCode는 null임)
-        if (savedCode != null && savedCode.equals(inputCode)) {
-
-            // 2. 번호 확인 성공했으니 숫자로 된 인증번호는 즉시 삭제
-            redisService.deleteValues(authKey);
-
-            // 3. 회원가입용 티켓(DONE) 생성 - "시간 없음(무제한 혹은 아주 길게)"
-            // 가입 완료 전까지 시간에 쫓기지 않도록 시간을 주지 않거나 아주 길게 설정합니다.
-            redisService.setValues("DONE:" + email, "true", Duration.ofHours(10)); // 시간 파라미터 제외 혹은 아주 긴 시간
-
+        if (isVerificationSuccessful(storedVerificationCode, userProvidedCode)) {
+            redisService.deleteValues(redisKey);
+            grantSignupTicket(email);
             return true;
         }
         return false;
+    }
+
+    private String generateSixDigitCode() {
+        int code = ThreadLocalRandom.current().nextInt(100000, 1000000);
+        return String.valueOf(code);
+    }
+
+    private SimpleMailMessage createVerificationMailMessage(String targetEmail, String verificationCode) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(senderEmail);
+        message.setTo(targetEmail);
+        message.setSubject("인증번호 확인");
+        message.setText("인증번호는 [" + verificationCode + "] 입니다.");
+        return message;
+    }
+
+    private boolean isVerificationSuccessful(String storedCode, String providedCode) {
+        return storedCode != null && storedCode.equals(providedCode);
+    }
+
+    private void grantSignupTicket(String email) {
+        redisService.setValues(REDIS_DONE_PREFIX + email, "true", SIGNUP_TICKET_EXPIRATION);
     }
 }

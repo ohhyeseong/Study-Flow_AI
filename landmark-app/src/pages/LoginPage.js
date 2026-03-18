@@ -11,23 +11,20 @@ const LoginPage = () => {
         e.preventDefault();
 
         try {
-            // 1. 백엔드 로그인 API 호출
             const response = await apiClient.post('/api/auth/login', {
                 username: username,
                 password: password,
             });
 
-            console.log('응답 데이터:', response.data);
+            console.log('응답 데이터:', response.data.data);
             console.log('응답 헤더:', response.headers);
 
-            // 2. 토큰 추출 (우선순위: 헤더 -> 바디 순서)
             let token = response.headers['authorization'];
 
-            if (!token && response.data && response.data.accessToken) {
-                token = response.data.accessToken;
+            if (!token && response.data.data && response.data.data.accessToken) {
+                token = response.data.data.accessToken;
             }
 
-            // 3. 토큰이 존재할 경우 처리
             if (token) {
                 const pureToken = token.startsWith('Bearer ') ? token.substring(7).trim() : token.trim();
                 localStorage.setItem('token', pureToken);
@@ -54,7 +51,7 @@ const LoginPage = () => {
         <div style={styles.container}>
             <div style={styles.formContainer}>
                 <h2 style={styles.title}>로그인</h2>
-                {/* 🔴 아래 onSubmit 부분을 확인하세요! */}
+                {}
                 <form onSubmit={handleLogin}>
                     <div style={styles.inputGroup}>
                         <label htmlFor="username" style={styles.label}>아이디</label>
@@ -90,7 +87,6 @@ const LoginPage = () => {
     );
 };
 
-// 스타일 정의 (변경 없음)
 const styles = {
     container: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f0f2f5' },
     formContainer: { padding: '40px', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: '100%', maxWidth: '400px' },

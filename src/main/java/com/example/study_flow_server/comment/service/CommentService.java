@@ -29,65 +29,79 @@ public class CommentService {
 
     @Transactional
     public CommentResponseDto createComment(Long postId, Long userId, CommentCreateDto createDto) {
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+        Post post = findPostById(postId);
+        User user = findUserById(userId);
+        Comment parentComment = findParentCommentIfPresent(createDto.parentId());
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
-        Comment parent = null;
-        
-        if (createDto.parentId() != null) {
-            parent = commentRepository.findById(createDto.parentId())
-                    .orElseThrow(() -> new CustomException(ErrorCode.COMMENT_NOT_FOUND));
-        }
-
-        Comment comment = Comment.builder()
+        Comment newComment = Comment.builder()
                 .content(createDto.content())
                 .post(post)
                 .user(user)
-                .parent(parent)
+                .parent(parentComment)
                 .build();
 
-        Comment response = commentRepository.save(comment);
+        Comment savedComment = commentRepository.save(newComment);
 
-        return CommentResponseDto.from(response);
+        return CommentResponseDto.from(savedComment);
     }
 
     public List<CommentResponseDto> getCommentsByPost(Long postId) {
         return commentRepository.findAllByPostIdWithUserAndPost(postId).stream()
-                .filter(comment -> comment.getParent() == null)
+                .filter(this::isRootComment)
                 .map(CommentResponseDto::from)
                 .collect(Collectors.toList());
     }
 
     @Transactional
-    public CommentResponseDto updateComment(CommentUpdateDto dto,
-                                            Long commentId,
-                                            User user) {
+    public CommentResponseDto updateComment(CommentUpdateDto updateDto, Long commentId, User user) {
+        Comment existingComment = findCommentById(commentId);
+        
+        validateCommentAuthor(existingComment, user);
 
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new CustomException(ErrorCode.COMMENT_NOT_FOUND));
+        existingComment.update(updateDto.content());
 
-        if(!comment.getUser().getId().equals(user.getId())){
-            throw new CustomException(ErrorCode.UNAUTHORIZED);
-        }
-
-        comment.update(dto.content());
-
-        return CommentResponseDto.from(comment);
+        return CommentResponseDto.from(existingComment);
     }
 
     @Transactional
     public void deleteComment(Long commentId, User user) {
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new CustomException(ErrorCode.COMMENT_NOT_FOUND));
+        Comment commentToDelete = findCommentById(commentId);
+        
+        validateCommentAuthor(commentToDelete, user);
 
+        commentRepository.delete(commentToDelete);
+    }
+
+    private Post findPostById(Long postId) {
+        return postRepository.findById(postId)
+                .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+    }
+
+    private User findUserById(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private Comment findParentCommentIfPresent(Long parentId) {
+        if (parentId == null) {
+            return null;
+        }
+        return commentRepository.findById(parentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMMENT_NOT_FOUND));
+    }
+
+    private Comment findCommentById(Long commentId) {
+        return commentRepository.findById(commentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMMENT_NOT_FOUND));
+    }
+
+    private boolean isRootComment(Comment comment) {
+        return comment.getParent() == null;
+    }
+
+    private void validateCommentAuthor(Comment comment, User user) {
         if (!comment.getUser().getId().equals(user.getId())) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
-
-        commentRepository.delete(comment);
     }
-
 }

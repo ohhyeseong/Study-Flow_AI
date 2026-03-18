@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-// API 기본 설정 (인증 토큰이 있다고 가정)
 const api = axios.create({
     baseURL: 'http://localhost:8090/api/ai',
     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
@@ -13,9 +12,8 @@ function AIStudyPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [history, setHistory] = useState([]);
     const [wrongNotes, setWrongNotes] = useState([]);
-    const [activeTab, setActiveTab] = useState("analyze"); // analyze | history | notes
+    const [activeTab, setActiveTab] = useState("analyze");
 
-    // 퀴즈 관련 상태
     const [currentQuiz, setCurrentQuiz] = useState(null);
     const [userAnswer, setUserAnswer] = useState("");
 
@@ -24,7 +22,6 @@ function AIStudyPage() {
         if (activeTab === "notes") fetchWrongNotes();
     }, [activeTab]);
 
-    // 1. 이미지 분석 요청
     const handleAnalyze = async () => {
         if (!prompt) return alert("질문을 입력해주세요!");
         setIsLoading(true);
@@ -38,7 +35,6 @@ function AIStudyPage() {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             alert("분석 완료!");
-            // 분석 후 바로 히스토리 탭으로 이동하거나 결과를 보여줌
             processAiResponse(response.data.aiResponse);
             fetchHistory();
         } catch (err) {
@@ -48,7 +44,6 @@ function AIStudyPage() {
         }
     };
 
-    // AI 응답에서 퀴즈 추출 (백엔드 로직 참고)
     const processAiResponse = (fullText) => {
         if (fullText.includes("###QUIZ###")) {
             const [desc, quizPart] = fullText.split("###QUIZ###");
@@ -59,7 +54,6 @@ function AIStudyPage() {
         }
     };
 
-    // 2. 퀴즈 정답 제출
     const handleQuizSubmit = async (quizId) => {
         try {
             const response = await api.post('/quiz/submit', {
@@ -67,7 +61,7 @@ function AIStudyPage() {
                 userAnswer: userAnswer
             });
             alert("제출되었습니다!");
-            setHistory(response.data); // 최신 히스토리 갱신
+            setHistory(response.data);
             setCurrentQuiz(null);
             setUserAnswer("");
         } catch (err) { alert("제출 실패"); }

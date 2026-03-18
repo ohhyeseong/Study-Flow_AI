@@ -47,12 +47,10 @@ public class AiHistory extends BaseEntity {
         this.user = user;
     }
 
-    // AiServiceTest 목적용
     public void setCreatedAt(LocalDateTime createdAt) {
         super.setCreatedAt(createdAt);
     }
 
-    //== 연관관계 편의 메서드 ==//
     public void setQuiz(Quiz quiz) {
         this.quiz = quiz;
     }

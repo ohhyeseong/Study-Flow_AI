@@ -36,7 +36,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiResponse<Void>> handleAuthenticationException(AuthenticationException e) {
-        ErrorCode errorCode = ErrorCode.UNAUTHORIZED; // 인증 실패 시 UNAUTHORIZED 에러 코드를 사용한다.
+        ErrorCode errorCode = ErrorCode.UNAUTHORIZED;
         return ResponseEntity
                 .status(errorCode.getHttpStatus())
                 .body(ApiResponse.error(errorCode));
@@ -48,7 +48,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(errorCode.getHttpStatus())
                 .body(ApiResponse.error(errorCode));
-
 
     }
 }

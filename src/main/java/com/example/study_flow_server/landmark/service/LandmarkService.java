@@ -1,6 +1,8 @@
 package com.example.study_flow_server.landmark.service;
 
-import com.example.study_flow_server.landmark.domain.Landmark; // 💡 패키지명 domin 확인!
+import com.example.study_flow_server.global.exception.CustomException;
+import com.example.study_flow_server.global.exception.ErrorCode;
+import com.example.study_flow_server.landmark.domain.Landmark;
 import com.example.study_flow_server.landmark.dto.LandmarkResponseDto;
 import com.example.study_flow_server.landmark.repository.LandmarkRepository;
 import com.example.study_flow_server.landmark.repository.LandmarkProjection;
@@ -13,69 +15,60 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class LandmarkService {
 
     private final LandmarkRepository landmarkRepository;
 
-    /**
-     * 1. 주변 랜드마크 조회 (거리 계산 포함)
-     */
     public List<LandmarkResponseDto> getNearbyLandmarks(Double lat, Double lon) {
-        List<LandmarkProjection> results = landmarkRepository.findNearbyLandmarks(lat, lon);
+        List<LandmarkProjection> projections = landmarkRepository.findNearbyLandmarks(lat, lon);
 
-        // DTO 생성자 순서: id, name, description, latitude, longitude, address, distance (7개)
-        return results.stream().map(p -> new LandmarkResponseDto(
-                null,               // id (프로젝션에 없다면 null)
-                p.getName(),
-                p.getDescription(),
-                p.getLatitude(),
-                p.getLongitude(),
-                null,               // address (프로젝션에 없다면 null)
-                p.getDistance()
-        )).collect(Collectors.toList());
+        return projections.stream()
+                .map(this::mapProjectionToDto)
+                .collect(Collectors.toList());
     }
 
-    /**
-     * 2. 모든 랜드마크 조회 (리액트 '저장 목록' 버튼용)
-     */
     public List<LandmarkResponseDto> getAllLandmarks() {
         List<Landmark> landmarks = landmarkRepository.findAll();
 
-        return landmarks.stream().map(landmark -> new LandmarkResponseDto(
-                landmark.getId(),          // id
-                landmark.getName(),        // name
-                landmark.getDescription(), // description
-                landmark.getLatitude(),    // latitude
-                landmark.getLongitude(),   // longitude
-                landmark.getAddress(),     // address
-                0.0                        // distance (전체 목록은 계산 전이므로 0.0)
-        )).collect(Collectors.toList());
+        return landmarks.stream()
+                .map(this::mapEntityToDto)
+                .collect(Collectors.toList());
     }
 
-    /**
-     * 3. 새로운 랜드마크 등록
-     */
     @Transactional
     public void registerLandmark(LandmarkResponseDto dto) {
-        // Landmark 엔티티 클래스에 @Builder가 있어야 작동합니다.
         Landmark landmark = Landmark.builder()
                 .name(dto.getName())
                 .description(dto.getDescription())
                 .latitude(dto.getLatitude())
                 .longitude(dto.getLongitude())
-                .address(dto.getAddress()) // 주소 저장 추가
+                .address(dto.getAddress())
                 .build();
 
         landmarkRepository.save(landmark);
     }
 
-    /**
-     * 4. 특정 랜드마크 상세 조회
-     */
-    public LandmarkResponseDto getLandmarkDetail(Long id) {
-        Landmark landmark = landmarkRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("해당 랜드마크가 존재하지 않습니다. id=" + id));
+    public LandmarkResponseDto getLandmarkDetail(Long landmarkId) {
+        Landmark landmark = landmarkRepository.findById(landmarkId)
+                .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 
+        return mapEntityToDto(landmark);
+    }
+
+    private LandmarkResponseDto mapProjectionToDto(LandmarkProjection projection) {
+        return new LandmarkResponseDto(
+                null,
+                projection.getName(),
+                projection.getDescription(),
+                projection.getLatitude(),
+                projection.getLongitude(),
+                null,
+                projection.getDistance()
+        );
+    }
+
+    private LandmarkResponseDto mapEntityToDto(Landmark landmark) {
         return new LandmarkResponseDto(
                 landmark.getId(),
                 landmark.getName(),

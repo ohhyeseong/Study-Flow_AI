@@ -61,7 +61,6 @@ class AiServiceTest {
 
     @BeforeEach
     void setUp() {
-        // 필드로 선언된 Mock 객체들을 사용하여 WebClient의 체인 형태 호출을 Mocking한다.
         lenient().when(webClient.post()).thenReturn(requestBodyUriSpec);
         lenient().when(requestBodyUriSpec.uri(any(String.class))).thenReturn(requestBodyUriSpec);
         lenient().when(requestBodyUriSpec.contentType(any(MediaType.class))).thenReturn(requestBodyUriSpec);
@@ -72,7 +71,6 @@ class AiServiceTest {
     @Test
     @DisplayName("AI 기록 조회 - 성공")
     void getHistoryList_Success() {
-        // given
         Long userId = 1L;
         User user = User.builder().id(userId).username("testuser").build();
 
@@ -99,10 +97,8 @@ class AiServiceTest {
         given(aiHistoryRepository.findAllByUserIdOrderByCreatedAtAsc(userId))
                 .willReturn(mockHistories);
 
-        // when
         List<AiHistoryResponseDto> result = aiService.getHistoryList(userId);
 
-        // then
         assertThat(result).isNotNull();
         assertThat(result).hasSize(2);
 
@@ -118,16 +114,13 @@ class AiServiceTest {
     @Test
     @DisplayName("AI 기록 조회 - 결과 없음")
     void getHistoryList_NoResult() {
-        // given
         Long userId = 2L;
 
         given(aiHistoryRepository.findAllByUserIdOrderByCreatedAtAsc(userId))
                 .willReturn(List.of());
 
-        // when
         List<AiHistoryResponseDto> result = aiService.getHistoryList(userId);
 
-        // then
         assertThat(result).isNotNull();
         assertThat(result).isEmpty();
 
@@ -137,7 +130,6 @@ class AiServiceTest {
     @Test
     @DisplayName("이미지 분석 - 성공")
     void analyzeImage_Success() {
-        // given
         User user = User.builder().id(1L).username("testuser").build();
         MockMultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", "test image".getBytes());
         String prompt = "이 이미지는 무엇인가요?";
@@ -146,10 +138,8 @@ class AiServiceTest {
 
         given(responseSpec.bodyToMono(AiResponseDto.class)).willReturn(Mono.just(mockResponse));
 
-        // when
         AiResponseDto result = aiService.analyzeImage(user, file, prompt);
 
-        // then
         assertThat(result).isNotNull();
         assertThat(result.description()).isEqualTo("테스트 응답");
 
@@ -159,30 +149,24 @@ class AiServiceTest {
     @Test
     @DisplayName("이미지 분석 - AI 서버 500 에러 발생 시")
     void analyzeImage_Fail_AiServerError() {
-        // given
         User user = User.builder().id(1L).username("testuser").build();
         MockMultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", "test image".getBytes());
         String prompt = "이 이미지는 무엇인가요?";
 
-        // responseSpec.bodyToMono(AiResponseDto.class)가 호출되면, WebClientResponseException을 던지도록 설정
-        // 실제 에러처럼 상태 코드, 메시지, 빈 응답 본문을 가진 예외 객체를 생성하여 던진다.
         given(responseSpec.bodyToMono(AiResponseDto.class)).willThrow(
                 new WebClientResponseException(
-                        500, // 상태 코드
-                        "Internal Server Error", // 상태 메시지
-                        null, // 헤더 (null 가능)
-                        new byte[0], // 응답 본문 (null이 아닌 빈 바이트 배열)
-                        null  // 문자셋 (null 가능)
+                        500,
+                        "Internal Server Error",
+                        null,
+                        new byte[0],
+                        null
                 )
         );
 
-        // when & then
-        // aiService.analyzeImage를 실행했을 때 CustomException이 발생하는지 검증
         CustomException exception = assertThrows(CustomException.class, () -> {
             aiService.analyzeImage(user, file, prompt);
         });
 
-        // 발생한 예외의 ErrorCode가 AI_SERVER_ERROR인지 확인
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AI_SERVER_ERROR);
     }
 }
