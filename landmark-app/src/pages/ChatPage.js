@@ -14,8 +14,15 @@ const ChatPage = () => {
     const stompClient = useRef(null);
     const messagesEndRef = useRef(null);
 
+    const myUsername = localStorage.getItem('username');
+
     useEffect(() => {
         fetchRooms();
+        connectStomp();
+
+        return () => {
+            if (stompClient.current) stompClient.current.disconnect();
+        };
     }, []);
 
     const fetchRooms = async () => {
@@ -32,59 +39,87 @@ const ChatPage = () => {
         try {
             await apiClient.post('/api/chat/rooms', { title: newRoomTitle });
             setNewRoomTitle('');
-            fetchRooms();
         } catch (error) {
             console.error('채팅방 생성 실패:', error);
-            alert('채팅방 생성에 실패했습니다.');
         }
     };
 
-    const handleEnterRoom = (room) => {
-        setCurrentRoom(room);
-        setMessages([]);
-        connectStomp(room.id);
-    };
+    const handleEnterRoom = async (room) => {
+        try {
+            await apiClient.post(`/api/chat/rooms/${room.id}/enter`);
 
-    const handleLeaveRoom = () => {
-        if (stompClient.current) {
-            stompClient.current.disconnect();
+            const response = await apiClient.get(`/api/chat/rooms/${room.id}/messages`);
+            setMessages(response.data.data || []);
+
+            setCurrentRoom(room);
+
+            if (stompClient.current?.connected) {
+                subscribeRoom(room.id);
+            }
+        } catch (error) {
+            console.error('채팅방 입장 실패:', error);
         }
-        setCurrentRoom(null);
-        fetchRooms();
     };
 
-    const connectStomp = (roomId) => {
+    const handleExitRoom = async () => {
+        if (!currentRoom) return;
+
+        if (window.confirm("이 채팅방에서 나가시겠습니까? 참여자 목록에서 제외됩니다.")) {
+            try {
+                await apiClient.post(`/api/chat/rooms/${currentRoom.id}/exit`);
+
+                setCurrentRoom(null);
+                setMessages([]);
+            } catch (error) {
+                console.error('방 나가기 실패:', error);
+                alert('퇴장 처리 중 오류가 발생했습니다.');
+            }
+        }
+    };
+
+    const connectStomp = () => {
         const token = localStorage.getItem('token');
-
-        const socket = new SockJS('http://localhost:8090/ws-chat');
+        const socket = new SockJS('http://localhost:8090/ws');
         stompClient.current = Stomp.over(socket);
 
-        const connectHeaders = {};
-            if (token) {
-                connectHeaders['Authorization'] = `Bearer ${token}`;
-            }
+            stompClient.current.debug = () => {};
+
+            const connectHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
 
         stompClient.current.connect(connectHeaders, () => {
-            stompClient.current.subscribe(`/sub/chat/room/${roomId}`, (message) => {
-                const receivedMessage = JSON.parse(message.body);
-                setMessages((prev) => [...prev, receivedMessage]);
+            console.log('STOMP Connected');
+
+            stompClient.current.subscribe('/sub/chat/rooms', (message) => {
+                const updatedRooms = JSON.parse(message.body);
+                setRooms(updatedRooms);
             });
         }, (error) => {
             console.error('STOMP Connection Error:', error);
         });
     };
 
-    const handleSendMessage = () => {
-        if (!newMessage || !stompClient.current || !currentRoom) return;
+    const subscribeRoom = (roomId) => {
+        stompClient.current.subscribe(`/sub/chat/room/${roomId}`, (message) => {
+            const receivedMessage = JSON.parse(message.body);
+            setMessages((prev) => [...prev, receivedMessage]);
+        });
+    };
 
+    const handleSendMessage = () => {
+        if (!newMessage || !stompClient.current?.connected || !currentRoom) return;
+
+        const token = localStorage.getItem('token');
         const message = {
             roomId: currentRoom.id,
             content: newMessage,
-            sender: localStorage.getItem('username') || 'Anonymous',
             type: 'TALK'
         };
 
-        stompClient.current.send("/pub/chat/message", {}, JSON.stringify(message));
+        stompClient.current.send(
+            "/pub/chat/message",
+            { Authorization: `Bearer ${token}` },
+            JSON.stringify(message)
+        );
         setNewMessage('');
     };
 
@@ -129,18 +164,21 @@ const ChatPage = () => {
                     <div style={styles.chatWrapper}>
                         <div style={styles.chatHeader}>
                             <h3 style={styles.chatTitle}>{currentRoom.title}</h3>
-                            <button onClick={handleLeaveRoom} style={styles.leaveButton}>나가기</button>
+                            <button onClick={handleExitRoom} style={styles.exitButton}>방 나가기</button>
                         </div>
 
                         <div style={styles.chatWindow}>
-                            {messages.map((msg, index) => (
-                                <div key={index} style={msg.sender === localStorage.getItem('username') ? styles.myMsgRow : styles.otherMsgRow}>
-                                    <div style={styles.author}>{msg.sender}</div>
-                                    <div style={msg.sender === localStorage.getItem('username') ? styles.myBubble : styles.otherBubble}>
-                                        {msg.content}
+                            {messages.map((msg, index) => {
+                                const isMe = msg.senderName === myUsername;
+                                return (
+                                    <div key={index} style={isMe ? styles.myMsgRow : styles.otherMsgRow}>
+                                        {!isMe && <div style={styles.author}>{msg.senderName}</div>}
+                                        <div style={isMe ? styles.myBubble : styles.otherBubble}>
+                                            {msg.content}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                             <div ref={messagesEndRef} />
                         </div>
 
@@ -165,35 +203,27 @@ const ChatPage = () => {
 const styles = {
     layout: { height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f5f7fb' },
     container: { flex: 1, display: 'flex', flexDirection: 'column', maxWidth: '850px', margin: '0 auto', width: '100%', backgroundColor: '#fff', overflow: 'hidden' },
-
-    // 목록 상단
     listHeader: { padding: '20px', borderBottom: '1px solid #eee' },
     title: { margin: '0 0 15px 0', fontSize: '20px', color: '#333' },
     createRoomArea: { display: 'flex', gap: '10px' },
     input: { flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none' },
     button: { padding: '10px 20px', backgroundColor: '#4285F4', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
-
-    // 목록 스크롤
     scrollArea: { flex: 1, overflowY: 'auto', padding: '20px' },
     roomGrid: { display: 'flex', flexDirection: 'column', gap: '12px' },
-    roomCard: { padding: '18px', border: '1px solid #f0f0f0', borderRadius: '12px', cursor: 'pointer', backgroundColor: '#fff', boxShadow: '0 2px 5px rgba(0,0,0,0.02)', transition: 'all 0.2s' },
+    roomCard: { padding: '18px', border: '1px solid #f0f0f0', borderRadius: '12px', cursor: 'pointer', backgroundColor: '#fff', boxShadow: '0 2px 5px rgba(0,0,0,0.02)' },
     roomTitle: { fontWeight: 'bold', fontSize: '16px', color: '#2c3e50', marginBottom: '5px' },
     roomMeta: { fontSize: '13px', color: '#94a3b8' },
     emptyText: { textAlign: 'center', color: '#94a3b8', marginTop: '40px' },
-
-    // 채팅창 화면
     chatWrapper: { flex: 1, display: 'flex', flexDirection: 'column', height: '100%' },
     chatHeader: { padding: '15px 20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff' },
     chatTitle: { margin: 0, fontSize: '18px' },
-    leaveButton: { padding: '6px 12px', backgroundColor: '#fff', color: '#ff4d4f', border: '1px solid #ff4d4f', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' },
-
+    exitButton: { padding: '8px 16px', backgroundColor: '#fff', color: '#ff4d4f', border: '1px solid #ff4d4f', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' },
     chatWindow: { flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '15px', backgroundColor: '#f8fafc' },
     myMsgRow: { alignSelf: 'flex-end', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' },
     otherMsgRow: { alignSelf: 'flex-start', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' },
     author: { fontSize: '12px', color: '#64748b', marginBottom: '4px', padding: '0 5px' },
     myBubble: { padding: '10px 16px', borderRadius: '18px 18px 0 18px', backgroundColor: '#4285F4', color: '#fff', maxWidth: '80%', fontSize: '14px', boxShadow: '0 2px 4px rgba(66,133,244,0.2)' },
     otherBubble: { padding: '10px 16px', borderRadius: '18px 18px 18px 0', backgroundColor: '#fff', color: '#333', maxWidth: '80%', fontSize: '14px', border: '1px solid #e2e8f0' },
-
     inputArea: { padding: '15px 20px', borderTop: '1px solid #eee', display: 'flex', gap: '10px', backgroundColor: '#fff' },
     chatInput: { flex: 1, padding: '12px 15px', borderRadius: '25px', border: '1px solid #e2e8f0', outline: 'none', fontSize: '14px' },
     sendButton: { padding: '10px 20px', backgroundColor: '#4285F4', color: 'white', border: 'none', borderRadius: '25px', cursor: 'pointer', fontWeight: 'bold' }

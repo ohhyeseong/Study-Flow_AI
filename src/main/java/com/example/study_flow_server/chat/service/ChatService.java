@@ -43,7 +43,7 @@ public class ChatService {
 
         joinRoom(chatRoom, creator);
 
-        return ChatRoomDto.from(chatRoom);
+        return ChatRoomDto.from(chatRoom, 1L);
     }
 
     @Transactional
@@ -74,6 +74,16 @@ public class ChatService {
         return ChatResponseDto.from(chatMessage);
     }
 
+    @Transactional
+    public void exitRoom(Long roomId, Long userId) {
+        ChatRoom chatRoom = findChatRoomById(roomId);
+        User user = findUserById(userId);
+
+        chatRoomMemberRepository.findByChatRoomAndUser(chatRoom, user)
+                .ifPresent(chatRoomMemberRepository::delete);
+
+    }
+
     public List<ChatResponseDto> getChatMessages(Long roomId) {
         return chatRepository.findAllByChatRoomIdOrderByCreatedAtAsc(roomId).stream()
                 .map(ChatResponseDto::from)
@@ -82,7 +92,10 @@ public class ChatService {
 
     public List<ChatRoomDto> getAllRooms() {
         return chatRoomRepository.findAll().stream()
-                .map(ChatRoomDto::from)
+                .map(room -> {
+                    Long count = chatRoomMemberRepository.countByChatRoom(room);
+                    return ChatRoomDto.from(room, count);
+                })
                 .collect(Collectors.toList());
     }
 
@@ -93,7 +106,7 @@ public class ChatService {
 
     private ChatRoom findChatRoomById(Long roomId) {
         return chatRoomRepository.findById(roomId)
-                .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND)); // TODO: CHAT_ROOM_NOT_FOUND 커스텀 예외로 수정 필요
+                .orElseThrow(() -> new CustomException(ErrorCode.CHATROOM_NOT_FOUND));
     }
 
     private boolean isUserAlreadyInRoom(ChatRoom chatRoom, User user) {
