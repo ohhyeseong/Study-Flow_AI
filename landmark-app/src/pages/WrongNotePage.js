@@ -7,7 +7,6 @@ const WrongNotePage = () => {
     const [wrongNotes, setWrongNotes] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // 다시 풀기 모달 상태 관리
     const [retryQuiz, setRetryQuiz] = useState(null);
     const [retryAnswer, setRetryAnswer] = useState(null);
     const [isRetryCorrect, setIsRetryCorrect] = useState(null);
@@ -19,20 +18,18 @@ const WrongNotePage = () => {
     const fetchWrongNotes = async () => {
         try {
             const response = await apiClient.get('/api/ai/notes/wrong');
-            setWrongNotes(response.data.data);
+            // 데이터가 있을 때만 설정
+            setWrongNotes(response.data.data || []);
             setLoading(false);
         } catch (error) {
             console.error("오답노트 로딩 실패:", error);
             if (error.response?.status === 401 || error.response?.status === 403) {
                 alert("로그인이 만료되었거나 권한이 없습니다.");
-            } else {
-                alert("오답노트를 불러오지 못했습니다.");
             }
             setLoading(false);
         }
     };
 
-    // 다시 풀기 모달 열기
     const openRetryModal = (note) => {
         setRetryQuiz(note);
         setRetryAnswer(null);
@@ -40,22 +37,22 @@ const WrongNotePage = () => {
     };
 
     const handleRetrySubmit = async (opt) => {
-            if (isRetryCorrect !== null) return;
+        if (isRetryCorrect !== null) return;
 
-            setRetryAnswer(opt);
-            const isCorrect = opt === retryQuiz.correctAnswer;
-            setIsRetryCorrect(isCorrect);
+        setRetryAnswer(opt);
+        const isCorrect = opt === retryQuiz.correctAnswer;
+        setIsRetryCorrect(isCorrect);
 
-            if (isCorrect) {
-                try {
-                    await apiClient.delete(`/api/ai/notes/wrong/${retryQuiz.quizId}`);
-
-                    setWrongNotes(prevNotes => prevNotes.filter(note => note.quizId !== retryQuiz.quizId));
-                } catch (error) {
-                    console.error("오답노트 삭제 실패:", error);
-                }
+        if (isCorrect) {
+            try {
+                await apiClient.delete(`/api/ai/notes/wrong/${retryQuiz.quizId}`);
+                // 정답을 맞추면 목록에서 해당 항목 제거 (애니메이션 효과처럼 느껴짐)
+                setWrongNotes(prevNotes => prevNotes.filter(note => note.quizId !== retryQuiz.quizId));
+            } catch (error) {
+                console.error("오답노트 삭제 실패:", error);
             }
-        };
+        }
+    };
 
     return (
         <div style={styles.layout}>
@@ -75,12 +72,14 @@ const WrongNotePage = () => {
                     </div>
                 ) : (
                     <div style={styles.listContainer}>
-                        {wrongNotes.map((note) => (
-                            <div key={note.quizId} style={styles.card}>
+                        {wrongNotes.map((note, index) => (
+                            // 해결 포인트: quizId와 index를 조합하여 유일한 key 생성
+                            <div key={`${note.quizId}-${index}`} style={styles.card}>
                                 <div style={styles.cardHeader}>
                                     <span style={styles.badge}>오답</span>
-                                    {/* DTO에 맞춰 note.createdAt 으로 수정 */}
-                                    <span style={styles.date}>{new Date(note.createdAt).toLocaleDateString()}</span>
+                                    <span style={styles.date}>
+                                        {note.createdAt ? new Date(note.createdAt).toLocaleDateString() : '날짜 없음'}
+                                    </span>
                                 </div>
 
                                 <div style={styles.questionArea}>
@@ -90,7 +89,6 @@ const WrongNotePage = () => {
                                 <div style={styles.answerGrid}>
                                     <div style={styles.wrongAnswerBox}>
                                         <div style={styles.answerLabel}>❌ 내가 쓴 답</div>
-                                        {/* DTO에 맞춰 note.userWrongAnswer 로 수정 */}
                                         <div style={styles.answerTextWrong}>{note.userWrongAnswer}</div>
                                     </div>
                                     <div style={styles.correctAnswerBox}>
@@ -99,7 +97,6 @@ const WrongNotePage = () => {
                                     </div>
                                 </div>
 
-                                {/* 다시 풀기 버튼 추가 */}
                                 <div style={{ textAlign: 'right', marginTop: '10px' }}>
                                     <button
                                         onClick={() => openRetryModal(note)}
@@ -113,7 +110,6 @@ const WrongNotePage = () => {
                     </div>
                 )}
 
-                {/* 다시 풀기 모달 창 */}
                 {retryQuiz && (
                     <div style={styles.modalOverlay}>
                         <div style={styles.modalContent}>
@@ -125,7 +121,7 @@ const WrongNotePage = () => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 {retryQuiz.options && retryQuiz.options.map((opt, idx) => (
                                     <button
-                                        key={idx}
+                                        key={`option-${idx}`}
                                         onClick={() => handleRetrySubmit(opt)}
                                         style={styles.modalOptionBtn(
                                             retryAnswer === opt,
@@ -144,7 +140,7 @@ const WrongNotePage = () => {
                                     color: isRetryCorrect ? '#28a745' : '#dc3545',
                                     fontWeight: 'bold'
                                 }}>
-                                    {isRetryCorrect ? "정답입니다! 완벽히 이해하셨네요 👏" : "다시 한 번 고민해 볼까요? 🤔"}
+                                    {isRetryCorrect ? "정답입니다! 오답노트에서 제외됩니다 👏" : "다시 한 번 고민해 볼까요? 🤔"}
                                 </p>
                             )}
 
@@ -157,7 +153,6 @@ const WrongNotePage = () => {
                         </div>
                     </div>
                 )}
-
             </div>
         </div>
     );
@@ -183,15 +178,14 @@ const styles = {
     answerTextWrong: { fontSize: '16px', color: '#dc3545', fontWeight: 'bold', wordBreak: 'break-all' },
     answerTextCorrect: { fontSize: '16px', color: '#28a745', fontWeight: 'bold', wordBreak: 'break-all' },
     emptyState: { textAlign: 'center', marginTop: '50px', color: '#888', padding: '40px', backgroundColor: '#fff', borderRadius: '16px', border: '1px dashed #ddd' },
-
-    // 버튼 스타일
     retryBtn: { padding: '8px 16px', backgroundColor: '#fff', color: '#4285F4', border: '1px solid #4285F4', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', transition: 'all 0.2s' },
 
-    // 모달 스타일
-    modalOverlay: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
-    modalContent: { backgroundColor: '#fff', padding: '30px', borderRadius: '20px', width: '400px', textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' },
+    // 모달 스타일 수정: fixed와 높은 z-index 적용
+    modalOverlay: { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 },
+    modalContent: { backgroundColor: '#fff', padding: '30px', borderRadius: '20px', width: '400px', textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' },
+
     modalOptionBtn: (isSelected, isCorrect, isAnswer) => ({
-        padding: '12px', borderRadius: '10px', border: '1px solid #ddd', cursor: 'pointer', width: '100%', marginBottom: '5px', fontSize: '15px',
+        padding: '12px', borderRadius: '10px', border: '1px solid #ddd', cursor: 'pointer', width: '100%', marginBottom: '5px', fontSize: '15px', textAlign: 'left',
         backgroundColor: isSelected ? (isCorrect ? '#d4edda' : '#f8d7da') : (isCorrect !== null && isAnswer ? '#d4edda' : '#fff'),
         borderColor: isSelected ? (isCorrect ? '#28a745' : '#dc3545') : '#ddd'
     }),

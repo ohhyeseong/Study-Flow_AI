@@ -43,17 +43,17 @@ public class AiDatabaseService {
                         .answer(originalQuizDto.answer())
                         .build();
 
-                Quiz savedQuiz = quizRepository.save(quiz);
+                Quiz savedQuiz = quizRepository.save(quiz); // 저장된 객체를 받음
                 log.info(">>> Quiz 저장 완료: ID {}", savedQuiz.getId());
 
+                // 저장된 ID를 포함한 DTO 생성
                 AiQuizDto updatedQuizDto = new AiQuizDto(
-                        savedQuiz.getId(),
+                        savedQuiz.getId(), // 생성된 ID를 넣음
                         originalQuizDto.question(),
                         originalQuizDto.options(),
                         originalQuizDto.answer()
                 );
 
-                // 기존 데이터에 새로운 AiQuizDto를 끼워넣어 반환
                 return new AiResponseDto(
                         response.filename(),
                         response.userPrompt(),
@@ -61,7 +61,8 @@ public class AiDatabaseService {
                         response.extractedText(),
                         response.description(),
                         updatedQuizDto,
-                        response.dbStatus()
+                        response.dbStatus(),
+                        response.responseTime()
                 );
 
             } catch (Exception e) {
@@ -73,4 +74,3 @@ public class AiDatabaseService {
         return response;
     }
 }
-
