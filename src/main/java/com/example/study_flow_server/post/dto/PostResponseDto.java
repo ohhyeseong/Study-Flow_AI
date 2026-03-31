@@ -19,7 +19,7 @@ public record PostResponseDto(
                 post.getId(),
                 post.getTitle(),
                 post.getContent(),
-                post.getUser() != null ? post.getUser().getUsername() : "알 수 없음",
+                post.getUser() != null ? post.getUser().getNickname() : "알 수 없음",
                 post.getCreatedAt(),
                 post.getComments() != null ?
                         post.getComments().stream()

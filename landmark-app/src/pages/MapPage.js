@@ -35,7 +35,7 @@ function MapPage() {
         new window.kakao.maps.Marker({ map: kakaoMap, position: myLoc });
       });
     }
-  }, []);
+  }, [currentPos.lat, currentPos.lon]);
 
   const fetchAndShowSavedLandmarks = useCallback(async () => {
     try {
