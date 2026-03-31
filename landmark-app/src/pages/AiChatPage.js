@@ -1,222 +1,248 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
-import apiClient from '../api';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import apiClient from '../api';
 import Header from '../components/Header';
 
-function AiChatPage() {
-  const [chatHistory, setChatHistory] = useState([]);
-  const [customPrompt, setCustomPrompt] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [showQuiz, setShowQuiz] = useState(false);
-  const [currentQuiz, setCurrentQuiz] = useState(null);
-  const [userAnswer, setUserAnswer] = useState(null);
-  const [isCorrect, setIsCorrect] = useState(null);
+const AiChatPage = () => {
+    const [messages, setMessages] = useState([]);
+    const [inputMessage, setInputMessage] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-  const navigate = useNavigate();
-  const chatEndRef = useRef(null);
-  const fileInputRef = useRef(null);
+    const [selectedFile, setSelectedFile] = useState(null);
+    const fileInputRef = useRef(null);
 
-  const fetchChatHistory = useCallback(async () => {
-    try {
-      const response = await apiClient.get('/api/ai/history');
-      const data = response.data.data || [];
-      setChatHistory(data);
-    } catch (err) {
-      if (err.response?.status === 401) navigate('/login');
-    }
-  }, [navigate]);
+    const messagesEndRef = useRef(null);
 
-  useEffect(() => {
-    fetchChatHistory();
-  }, [fetchChatHistory]);
+    // 대화 내역 불러오기
+    useEffect(() => {
+        const fetchHistory = async () => {
+            const welcomeMessage = {
+                role: 'ai',
+                content: "안녕하세요! 저는 당신의 스마트 학습 튜터 Flow입니다. 궁금한 점을 텍스트로 물어보시거나 자료(이미지)를 업로드하여 분석을 요청해보세요! ✨"
+            };
 
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatHistory]);
+            try {
+                const response = await apiClient.get('/api/ai/history');
+                const historyData = response.data.data || response.data;
 
-  const handleAIChat = async () => {
-    if (!selectedFile && !customPrompt) return;
-    if (isLoading) return;
+                if (historyData && historyData.length > 0) {
+                    const formattedHistory = [];
+                    historyData.forEach(item => {
+                        const userText = item.prompt || item.question || "";
+                        const aiText = item.answer || "";
 
-    const tempFile = selectedFile;
-    const tempPrompt = customPrompt;
-    const tempPreview = previewUrl;
+                        if (userText) formattedHistory.push({ role: 'user', content: userText });
+                        if (aiText) formattedHistory.push({ role: 'ai', content: aiText });
+                    });
 
-    setCustomPrompt("");
-    setSelectedFile(null);
-    setPreviewUrl(null);
+                    setMessages([welcomeMessage, ...formattedHistory]);
+                } else {
+                    setMessages([welcomeMessage]);
+                }
+            } catch (error) {
+                console.error("이전 대화 내역 불러오기 실패:", error);
+                setMessages([welcomeMessage]);
+            }
+        };
 
-    setChatHistory(prev => [...prev, { userPrompt: tempPrompt, imageUrl: tempPreview, aiResponse: null, isNew: true }]);
-    setIsLoading(true);
+        fetchHistory();
+    }, []);
 
-    const formData = new FormData();
-    if (tempFile) formData.append('file', tempFile);
-    formData.append('prompt', tempPrompt || "이 문제를 설명해줘.");
+    const handleFileChange = (e) => {
+        if (e.target.files && e.target.files[0]) {
+            setSelectedFile(e.target.files[0]);
+        }
+        e.target.value = null; // 같은 파일 재선택 가능하게 처리
+    };
 
-    try {
-      const res = await apiClient.post(`/api/ai/analyze`, formData);
-      const data = res.data.data;
+    const handleSendMessage = async (e) => {
+        e.preventDefault();
 
-      setChatHistory(prev => {
-        const updated = [...prev];
-        const lastIndex = updated.length - 1;
-        updated[lastIndex] = { ...updated[lastIndex], ...data, aiResponse: data.description, isNew: false };
-        return updated;
-      });
-    } catch (err) {
-      alert("분석 실패");
-      setChatHistory(prev => prev.slice(0, -1));
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        // 텍스트도 없고 파일도 없으면 무시
+        if (!inputMessage.trim() && !selectedFile) return;
 
-  const handleQuizSubmit = async (option) => {
-    if (!currentQuiz || isCorrect !== null) return;
-    setUserAnswer(option);
-    const correct = option === currentQuiz.answer;
-    setIsCorrect(correct);
+        const currentMessage = inputMessage;
+        let displayMessage = currentMessage;
 
-    try {
-      await apiClient.post(`/api/ai/quiz/submit`, {
-        quizId: currentQuiz.quizId || currentQuiz.id,
-        userAnswer: option
-      });
-      fetchChatHistory();
-    } catch (err) { console.error(err); }
-  };
+        // 화면에 보여줄 내 메시지 포맷팅
+        if (selectedFile) {
+            displayMessage = currentMessage
+                ? `[이미지 첨부됨] ${currentMessage}`
+                : "[이미지 첨부됨] 이 이미지를 분석해 주세요.";
+        }
 
-  const lastAiResponse = [...chatHistory].reverse().find(c => c.aiResponse);
+        const userMsg = { role: 'user', content: displayMessage };
+        setMessages(prev => [...prev, userMsg]);
 
-  return (
-    <div style={styles.layout}>
-      <Header />
-      <div style={styles.contentSplit}>
-        {/* 왼쪽: 학습 자료 분석 (프로그래머스 스타일) */}
-        <div style={styles.leftSection}>
-          <div style={styles.sectionHeader}>
-            <span style={styles.statusBadge}>Analysis View</span>
-            <h2 style={styles.sectionTitle}>학습 리포트</h2>
-          </div>
-          <div style={styles.scrollArea}>
-            {lastAiResponse?.imageUrl ? (
-              <div style={styles.imageContainer}><img src={lastAiResponse.imageUrl} alt="Target" style={styles.mainImage} /></div>
-            ) : (
-              <div style={styles.emptyNotice}>자료를 업로드하면 분석 리포트가 여기에 표시됩니다.</div>
-            )}
-            {lastAiResponse && (
-              <div style={styles.markdownWrapper} className="markdown-body">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{lastAiResponse.aiResponse}</ReactMarkdown>
-              </div>
-            )}
-          </div>
-        </div>
+        // 전송 직전 상태 초기화
+        setInputMessage('');
+        const fileToSend = selectedFile;
+        setSelectedFile(null);
+        setIsLoading(true);
 
-        {/* 오른쪽: AI 튜터 채팅 (인터랙션 레이어) */}
-        <div style={styles.rightSection}>
-          <div style={styles.chatHeader}>
-            <strong>AI 튜터와 대화</strong>
-            <div style={styles.onlineDot} />
-          </div>
-          <div style={styles.chatList}>
-            {chatHistory.map((chat, i) => (
-              <div key={i} style={styles.messageRow(chat.userPrompt)}>
-                {chat.userPrompt && <div style={styles.userBubble}>{chat.userPrompt}</div>}
-                {chat.aiResponse && (
-                  <div style={styles.aiBubble}>
-                    <div>분석이 완료되었습니다. 이해도를 체크해볼까요?</div>
-                    {chat.quizDto && (
-                      <button onClick={() => { setCurrentQuiz(chat.quizDto); setShowQuiz(true); setIsCorrect(null); }} style={styles.quizBtn}>
-                        📝 퀴즈 풀기
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-            {isLoading && <div style={styles.messageRow(false)}><div style={styles.aiBubble}>자료를 분석하고 있습니다... ⏳</div></div>}
-            <div ref={chatEndRef} />
-          </div>
-          <div style={styles.inputBar}>
-            <div style={styles.inputInner}>
-              <button onClick={() => fileInputRef.current.click()} style={styles.attachBtn}>📎</button>
-              <input type="file" ref={fileInputRef} hidden onChange={(e) => {
-                const file = e.target.files[0];
-                if(file) { setSelectedFile(file); setPreviewUrl(URL.createObjectURL(file)); }
-              }} />
-              <input style={styles.textInput} value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAIChat()} placeholder="질문을 입력하세요..." />
-              <button onClick={handleAIChat} style={styles.sendBtn} disabled={isLoading}>전송</button>
+        try {
+            const formData = new FormData();
+
+            // 💡 [핵심] 텍스트와 이미지 분기 처리
+            if (currentMessage.trim()) {
+                // 1. 텍스트가 있을 경우 프롬프트에 추가
+                formData.append('prompt', currentMessage);
+            } else if (fileToSend) {
+                // 2. 텍스트 없이 이미지만 보낼 경우 (AI가 분석하려면 기본 문구가 필요함)
+                formData.append('prompt', '첨부된 이미지를 분석해 주세요.');
+            }
+
+            if (fileToSend) {
+                // 3. 파일이 있을 경우에만 파일 데이터 추가
+                formData.append('file', fileToSend);
+            }
+
+            // 💡 [핵심] Axios에서는 multipart/form-data 헤더를 수동으로 넣으면 안 됩니다! (자동으로 Boundary가 생성됨)
+            const response = await apiClient.post('/api/ai/analyze', formData);
+
+            const aiMsg = {
+                role: 'ai',
+                content: response.data?.data?.answer || response.data?.answer || "결과를 가져오지 못했습니다."
+            };
+            setMessages(prev => [...prev, aiMsg]);
+        } catch (error) {
+            console.error("AI 튜터 통신 에러:", error);
+            setMessages(prev => [...prev, { role: 'ai', content: "죄송합니다. 서버 연결 또는 분석 중 문제가 발생했습니다." }]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages, isLoading]);
+
+    return (
+        <div style={styles.layout}>
+            <Header />
+            <div style={styles.content}>
+                <div style={styles.chatCard}>
+                    <div style={styles.chatHeader}>
+                        <div style={styles.aiBadge}>🤖</div>
+                        <div style={styles.chatTitleBlock}>
+                            <h3 style={styles.chatTitle}>스마트 AI 튜터</h3>
+                            <span style={styles.chatStatus}>{isLoading ? '데이터를 분석하는 중...' : '대기 중'}</span>
+                        </div>
+                    </div>
+
+                    <div style={styles.chatWindow}>
+                        {messages.map((msg, index) => (
+                            <div key={index} style={msg.role === 'user' ? styles.myMsgRow : styles.aiMsgRow}>
+                                {msg.role === 'ai' && (
+                                    <div style={styles.aiAvatar}>Flow</div>
+                                )}
+                                <div style={msg.role === 'user' ? styles.myBubble : styles.aiBubble}>
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]} style={styles.markdownContent}>
+                                        {msg.content}
+                                    </ReactMarkdown>
+                                </div>
+                            </div>
+                        ))}
+
+                        {isLoading && (
+                            <div style={styles.aiMsgRow}>
+                                <div style={styles.aiAvatar}>Flow</div>
+                                <div style={styles.aiBubble}>
+                                    <div style={styles.typingIndicator} className="typing-dots">
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        <div ref={messagesEndRef} />
+                    </div>
+
+                    <div style={styles.inputWrapper}>
+                        {selectedFile && (
+                            <div style={styles.filePreview}>
+                                <span style={styles.fileName}>🖼️ {selectedFile.name}</span>
+                                <button type="button" onClick={() => setSelectedFile(null)} style={styles.fileRemoveBtn}>✕</button>
+                            </div>
+                        )}
+
+                        <form onSubmit={handleSendMessage} style={styles.inputArea}>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                style={{ display: 'none' }}
+                                ref={fileInputRef}
+                                onChange={handleFileChange}
+                            />
+
+                            <button
+                                type="button"
+                                onClick={() => fileInputRef.current.click()}
+                                style={styles.attachBtn}
+                                title="이미지 첨부"
+                            >
+                                📷
+                            </button>
+
+                            <input
+                                type="text"
+                                value={inputMessage}
+                                onChange={(e) => setInputMessage(e.target.value)}
+                                placeholder="무엇이든 물어보세요! (이미지 분석도 가능해요)"
+                                style={styles.chatInput}
+                            />
+                            <button type="submit" disabled={isLoading || (!inputMessage.trim() && !selectedFile)} style={styles.sendBtn}>
+                                {isLoading ? "..." : "보내기"}
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </div>
-          </div>
         </div>
-      </div>
-
-      {/* 퀴즈 모달 (MainPage와 동일 로직 유지) */}
-      {showQuiz && currentQuiz && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalContent}>
-            <h3 style={{color: '#4285F4', marginBottom: '20px'}}>🎯 실력 확인 퀴즈</h3>
-            <p style={styles.quizText}>{currentQuiz.question}</p>
-            <div style={styles.quizOptions}>
-              {currentQuiz.options.map((opt, idx) => (
-                <button key={idx} onClick={() => handleQuizSubmit(opt)} style={styles.optBtn(userAnswer === opt, isCorrect, opt === currentQuiz.answer)}>
-                  {opt}
-                </button>
-              ))}
-            </div>
-            {isCorrect === false && (
-              <button onClick={() => navigate('/wrong-notes')} style={styles.wrongNoteLink}>📖 오답노트 보러가기</button>
-            )}
-            <button onClick={() => {setShowQuiz(false); setIsCorrect(null);}} style={styles.closeBtn}>
-              {isCorrect === false ? "나중에 하기" : "닫기"}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-const styles = {
-  layout: { width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#fff', overflow: 'hidden' },
-  contentSplit: { display: 'grid', gridTemplateColumns: '55% 45%', height: 'calc(100vh - 64px)' },
-  leftSection: { borderRight: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', padding: '32px', backgroundColor: '#f9fafb' },
-  sectionHeader: { marginBottom: '24px' },
-  statusBadge: { fontSize: '12px', fontWeight: 'bold', color: '#4285F4', backgroundColor: '#e8f0fe', padding: '4px 12px', borderRadius: '20px' },
-  sectionTitle: { fontSize: '24px', fontWeight: '800', marginTop: '12px', color: '#111827' },
-  scrollArea: { flex: 1, overflowY: 'auto', paddingRight: '10px' },
-  imageContainer: { width: '100%', borderRadius: '16px', overflow: 'hidden', border: '1px solid #e5e7eb', marginBottom: '24px', backgroundColor: '#fff' },
-  mainImage: { width: '100%', display: 'block' },
-  markdownWrapper: { backgroundColor: '#fff', padding: '24px', borderRadius: '16px', border: '1px solid #e5e7eb', lineHeight: '1.7' },
-  emptyNotice: { height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed #d1d5db', borderRadius: '16px', color: '#6b7280' },
-  rightSection: { display: 'flex', flexDirection: 'column', backgroundColor: '#fff' },
-  chatHeader: { padding: '20px 32px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  onlineDot: { width: '10px', height: '10px', backgroundColor: '#10b981', borderRadius: '50%' },
-  chatList: { flex: 1, overflowY: 'auto', padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: '16px' },
-  messageRow: (isUser) => ({ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start' }),
-  userBubble: { backgroundColor: '#4285F4', color: '#fff', padding: '12px 18px', borderRadius: '20px 20px 0 20px', maxWidth: '80%', fontWeight: '500' },
-  aiBubble: { backgroundColor: '#f3f4f6', color: '#1f2937', padding: '12px 18px', borderRadius: '20px 20px 20px 0', maxWidth: '80%', border: '1px solid #e5e7eb' },
-  quizBtn: { marginTop: '12px', width: '100%', padding: '10px', backgroundColor: '#fff', border: '1px solid #4285F4', color: '#4285F4', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' },
-  inputBar: { padding: '24px 32px', borderTop: '1px solid #f3f4f6' },
-  inputInner: { display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: '#f9fafb', padding: '8px 16px', borderRadius: '30px', border: '1px solid #e5e7eb' },
-  attachBtn: { background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#6b7280' },
-  textInput: { flex: 1, border: 'none', outline: 'none', backgroundColor: 'transparent', fontSize: '16px' },
-  sendBtn: { backgroundColor: '#4285F4', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' },
-  modalOverlay: { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
-  modalContent: { backgroundColor: '#fff', padding: '40px', borderRadius: '24px', width: '450px', textAlign: 'center', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' },
-  quizText: { fontSize: '18px', fontWeight: 'bold', marginBottom: '24px', color: '#1f2937' },
-  quizOptions: { display: 'flex', flexDirection: 'column', gap: '10px' },
-  optBtn: (isSelected, isCorrect, isAnswer) => ({
-    padding: '14px', borderRadius: '12px', border: '1px solid #e5e7eb', cursor: 'pointer', textAlign: 'left', transition: '0.2s',
-    backgroundColor: isSelected ? (isCorrect ? '#d1fae5' : '#fee2e2') : (isCorrect !== null && isAnswer ? '#d1fae5' : '#fff'),
-    borderColor: isSelected ? (isCorrect ? '#10b981' : '#ef4444') : '#e5e7eb'
-  }),
-  wrongNoteLink: { marginTop: '20px', padding: '12px', backgroundColor: '#f59e0b', color: '#fff', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', width: '100%' },
-  closeBtn: { marginTop: '12px', backgroundColor: '#6b7280', color: '#fff', border: 'none', padding: '12px', borderRadius: '12px', width: '100%', cursor: 'pointer' }
+    );
 };
 
-export default AiChatPage;
+const styles = {
+    layout: { width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f8fafc', overflow: 'hidden' },
+    content: { flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '30px 20px' },
+    chatCard: { width: '100%', maxWidth: '850px', height: '95%', backgroundColor: '#fff', borderRadius: '32px', border: '1px solid #e2e8f0', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
+    chatHeader: { padding: '24px 30px', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '15px', alignItems: 'center', backgroundColor: '#fff' },
+    aiBadge: { fontSize: '24px', backgroundColor: '#f0fdf4', width: '50px', height: '50px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    chatTitleBlock: { display: 'flex', flexDirection: 'column', gap: '4px' },
+    chatTitle: { margin: 0, fontSize: '18px', fontWeight: '800', color: '#1e293b' },
+    chatStatus: { fontSize: '12px', color: '#22c55e', fontWeight: 'bold' },
+    chatWindow: { flex: 1, padding: '30px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px', backgroundColor: '#fcfcfc' },
+    myMsgRow: { alignSelf: 'flex-end', display: 'flex', alignItems: 'flex-end', maxWidth: '80%' },
+    aiMsgRow: { alignSelf: 'flex-start', display: 'flex', alignItems: 'flex-start', gap: '10px', maxWidth: '80%' },
+    aiAvatar: { width: '36px', height: '36px', borderRadius: '18px', backgroundColor: '#1e293b', color: '#fff', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+    myBubble: { padding: '16px 20px', borderRadius: '24px 24px 0 24px', backgroundColor: '#4285F4', color: '#fff', fontSize: '15px', lineHeight: '1.6', boxShadow: '0 4px 6px rgba(66, 133, 244, 0.2)', wordBreak: 'break-word' },
+    aiBubble: { padding: '16px 20px', borderRadius: '24px 24px 24px 0', backgroundColor: '#fff', color: '#334155', fontSize: '15px', lineHeight: '1.6', boxShadow: '0 4px 6px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9', wordBreak: 'break-word', overflowX: 'auto' },
+    markdownContent: { color: 'inherit', fontSize: 'inherit' },
+
+    inputWrapper: { display: 'flex', flexDirection: 'column', borderTop: '1px solid #f1f5f9', backgroundColor: '#fff' },
+    filePreview: { display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 30px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' },
+    fileName: { fontSize: '13px', color: '#475569', fontWeight: '600', display: 'flex', alignItems: 'center' },
+    fileRemoveBtn: { background: 'none', border: 'none', color: '#ef4444', fontSize: '14px', cursor: 'pointer', fontWeight: 'bold', padding: '2px 6px' },
+    inputArea: { padding: '15px 30px', display: 'flex', gap: '12px', alignItems: 'center' },
+    attachBtn: { width: '45px', height: '45px', borderRadius: '50%', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#64748b', fontSize: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', transition: '0.2s', flexShrink: 0 },
+    chatInput: { flex: 1, padding: '16px 24px', borderRadius: '30px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', outline: 'none', fontSize: '15px', transition: 'border 0.2s' },
+    sendBtn: { padding: '0 28px', height: '48px', backgroundColor: '#1e293b', color: '#fff', border: 'none', borderRadius: '30px', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer', transition: '0.2s', flexShrink: 0 },
+
+    typingIndicator: { display: 'flex', gap: '4px', padding: '6px 0' },
+};
+
+const cssParams = `
+@keyframes typing { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
+.typing-dots span {
+    width: 8px; height: 8px; background: #94a3b8; border-radius: 50%;
+    opacity: 0.3; display: inline-block; animation: typing 1.2s infinite;
+}
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+`;
+
+const TypingStyle = () => <style>{cssParams}</style>;
+
+export default () => <><TypingStyle/><AiChatPage/></>;

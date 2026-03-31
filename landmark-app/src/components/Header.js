@@ -14,12 +14,12 @@ function Header() {
 
   const isActive = (path) => location.pathname === path;
 
-  // 메뉴 구성 (추후 관리 용이)
   const menuItems = [
     { name: '서비스 소개', path: '/' },
     { name: 'AI 학습', path: '/ai-tutor' },
     { name: '스터디 맵', path: '/map' },
     { name: '게시판', path: '/board' },
+    { name: '채팅', path: '/chat' },
     { name: '오답노트', path: '/wrong-notes' },
     { name: '성능 지표', path: '/performance' },
   ];
@@ -50,7 +50,6 @@ function Header() {
 
           <div style={headerStyles.divider} />
 
-          {/* 로그아웃 버튼 */}
           <button
             onClick={handleLogout}
             style={headerStyles.logoutBtn}
@@ -69,7 +68,7 @@ const headerStyles = {
   navBar: {
     width: '100%',
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    backdropFilter: 'blur(10px)', // 뒷배경 비치는 효과 (고급스러움)
+    backdropFilter: 'blur(10px)',
     borderBottom: '1px solid #f1f5f9',
     position: 'sticky',
     top: 0,
