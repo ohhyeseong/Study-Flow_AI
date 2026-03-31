@@ -35,23 +35,30 @@ public class AiService {
     private final AiDatabaseService aiDatabaseService;
     private final QuizResultRepository quizResultRepository;
 
+    // 💡 수정: 파일이 null일 때 Redis 키 생성 시 에러가 나지 않도록 조건부 처리
     @Transactional
-    @Cacheable(value = "aiAnalysis", key = "#prompt + #file.getOriginalFilename()")
+    @Cacheable(value = "aiAnalysis", key = "#prompt + (#file != null ? #file.getOriginalFilename() : 'no_file')")
     public AiResponseDto analyzeImage(User user, MultipartFile file, String prompt) {
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
 
-        log.info(">>> AI 서버 호출 시작: {}", file.getOriginalFilename());
+        // 💡 수정: 로깅 시 null 체크
+        String fileName = (file != null && !file.isEmpty()) ? file.getOriginalFilename() : "첨부파일 없음";
+        log.info(">>> AI 서버 호출 시작: {}", fileName);
 
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        try {
-            builder.part("file", new ByteArrayResource(file.getBytes()))
-                    .filename(file.getOriginalFilename())
-                    .contentType(MediaType.parseMediaType(file.getContentType()));
-        } catch (IOException e) {
-            throw new RuntimeException("파일 처리 중 오류가 발생했습니다.", e);
+        builder.part("prompt", prompt); // 프롬프트는 항상 보냄
+
+        // 💡 수정: 파일이 실제로 존재할 때만 파트 추가
+        if (file != null && !file.isEmpty()) {
+            try {
+                builder.part("file", new ByteArrayResource(file.getBytes()))
+                        .filename(file.getOriginalFilename())
+                        .contentType(MediaType.parseMediaType(file.getContentType()));
+            } catch (IOException e) {
+                throw new RuntimeException("파일 처리 중 오류가 발생했습니다.", e);
+            }
         }
-        builder.part("prompt", prompt);
 
         AiResponseDto responseDto = webClient.post()
                 .uri("/api/v1/analyze-image")

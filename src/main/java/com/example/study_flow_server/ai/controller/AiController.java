@@ -4,13 +4,8 @@ import com.example.study_flow_server.ai.dto.AiHistoryResponseDto;
 import com.example.study_flow_server.ai.dto.AiResponseDto;
 import com.example.study_flow_server.ai.dto.QuizSubmitRequest;
 import com.example.study_flow_server.ai.dto.WrongNoteResponse;
-import com.example.study_flow_server.ai.entity.QuizResult;
-import com.example.study_flow_server.ai.entity.SolveStatus;
-import com.example.study_flow_server.ai.repository.QuizResultRepository;
 import com.example.study_flow_server.ai.service.AiService;
 import com.example.study_flow_server.ai.service.QuizService;
-import com.example.study_flow_server.global.exception.CustomException;
-import com.example.study_flow_server.global.exception.ErrorCode;
 import com.example.study_flow_server.global.response.ApiResponse;
 import com.example.study_flow_server.global.security.CustomUserDetails;
 import com.example.study_flow_server.user.domain.User;
@@ -18,11 +13,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import reactor.core.publisher.Mono;
 
 import java.util.List;
 
@@ -42,7 +35,10 @@ public class AiController {
             @RequestPart(value = "file", required = false) MultipartFile file,
             @RequestPart("prompt") String prompt
     ) {
-        log.info("AI 분석 요청 - 사용자: {}, 파일: {}, 프롬포트: {}", userDetails.getUsername(), file.getOriginalFilename(), prompt);
+        // 💡 수정: 파일이 null일 경우를 대비한 안전한 로깅 처리
+        String fileName = (file != null && !file.isEmpty()) ? file.getOriginalFilename() : "첨부파일 없음";
+        log.info("AI 분석 요청 - 사용자: {}, 파일: {}, 프롬포트: {}", userDetails.getUsername(), fileName, prompt);
+
         AiResponseDto responseDto = aiService.analyzeImage(userDetails.getUser(), file, prompt);
         return ApiResponse.ok(responseDto);
     }
@@ -61,8 +57,7 @@ public class AiController {
             @Valid @RequestBody QuizSubmitRequest request
     ) {
         User user = userDetails.getUser();
-
-        quizService.submitAnswer(userDetails.getUser(), request);
+        quizService.submitAnswer(user, request);
         List<AiHistoryResponseDto> historyList = aiService.getHistoryList(user.getId());
         return ApiResponse.ok(historyList);
     }
@@ -82,7 +77,6 @@ public class AiController {
     ) {
         Long userId = userDetails.getUser().getId();
         aiService.deleteWrongNote(userId, quizId);
-
         return ApiResponse.ok(null);
     }
 }
