@@ -26,11 +26,11 @@ const LoginPage = () => {
 
             if (token) {
                 const pureToken = token.startsWith('Bearer ') ? token.substring(7).trim() : token.trim();
-                localStorage.setItem('token', pureToken);
+                localStorage.setItem('accessToken', pureToken);
                 localStorage.setItem('username', username);
 
                 alert("로그인에 성공했습니다!");
-                navigate('/');
+                navigate('/main');
                 window.location.reload();
             } else {
                 alert("로그인 성공했으나 서버로부터 토큰을 받지 못했습니다.");

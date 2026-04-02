@@ -33,11 +33,10 @@ public class AiController {
     public ApiResponse<AiResponseDto> analyzeImage(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestPart(value = "file", required = false) MultipartFile file,
-            @RequestPart("prompt") String prompt
+            @RequestPart(value = "prompt", required = false) String prompt
     ) {
-        // 💡 수정: 파일이 null일 경우를 대비한 안전한 로깅 처리
-        String fileName = (file != null && !file.isEmpty()) ? file.getOriginalFilename() : "첨부파일 없음";
-        log.info("AI 분석 요청 - 사용자: {}, 파일: {}, 프롬포트: {}", userDetails.getUsername(), fileName, prompt);
+        String fileName = (file != null && !file.isEmpty()) ? file.getOriginalFilename() : "no_file";
+        log.info("AI Request - User: {}, File: {}, Prompt: {}", userDetails.getUsername(), fileName, prompt);
 
         AiResponseDto responseDto = aiService.analyzeImage(userDetails.getUser(), file, prompt);
         return ApiResponse.ok(responseDto);

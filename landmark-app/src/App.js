@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import LandingPage from './pages/LandingPage';
+import MainPage from './pages/MainPage';
 import AiChatPage from './pages/AiChatPage';
 import PerformancePage from './pages/PerformancePage';
 import LoginPage from './pages/LoginPage';
@@ -17,7 +17,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/main" element={<MainPage />} />
 
         <Route path="/ai-tutor" element={<AiChatPage />} />
 

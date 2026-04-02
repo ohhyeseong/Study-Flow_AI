@@ -1,304 +1,150 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
-import apiClient from '../api';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import Header from '../components/Header';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
-function MainPage() {
-  const [chatHistory, setChatHistory] = useState([]);
-  const [customPrompt, setCustomPrompt] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [showQuiz, setShowQuiz] = useState(false);
-  const [currentQuiz, setCurrentQuiz] = useState(null);
-  const [userAnswer, setUserAnswer] = useState(null);
-  const [isCorrect, setIsCorrect] = useState(null);
-  const [performanceData, setPerformanceData] = useState([
-    { name: '이전 평균', time: 11.5, color: '#94a3b8' },
-    { name: '현재 응답', time: 0, color: '#4285F4' }
-  ]);
+const MainPage = () => {
+    const navigate = useNavigate();
 
-  const navigate = useNavigate();
-  const chatEndRef = useRef(null);
-  const fileInputRef = useRef(null);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const fetchChatHistory = useCallback(async () => {
-    try {
-      const response = await apiClient.get('/api/ai/history');
-      const data = response.data.data || response.data || [];
-      if (Array.isArray(data)) {
-        setChatHistory(data);
-      }
-    } catch (err) {
-      if (err.response?.status === 401 || err.response?.status === 403) {
-        localStorage.removeItem('token');
-        navigate('/login');
-      }
-    }
-  }, [navigate]);
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatHistory]);
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/login');
-    } else {
-      fetchChatHistory();
-    }
-  }, [navigate, fetchChatHistory]);
-
-  const handleAIChat = async () => {
-    if (!selectedFile && !customPrompt) {
-      alert("이미지나 질문을 입력해주세요.");
-      return;
-    }
-    if (isLoading) return;
-
-    const tempFile = selectedFile;
-    const tempPrompt = customPrompt;
-    const tempPreview = previewUrl;
-
-    setCustomPrompt("");
-    setSelectedFile(null);
-    setPreviewUrl(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-
-    setChatHistory(prev => [...prev, {
-        userPrompt: tempPrompt,
-        imageUrl: tempPreview,
-        aiResponse: null,
-        isNew: true
-    }]);
-    setIsLoading(true);
-
-    const formData = new FormData();
-    if (tempFile) formData.append('file', tempFile);
-    formData.append('prompt', tempPrompt || "이 문제를 설명해줘.");
-
-    try {
-      const startTime = performance.now();
-      const res = await apiClient.post(`/api/ai/analyze`, formData);
-      const endTime = performance.now();
-      const duration = parseFloat(((endTime - startTime) / 1000).toFixed(2));
-
-      const data = res.data.data || res.data;
-
-      setPerformanceData([
-        { name: '이전 평균', time: 11.5, color: '#94a3b8' },
-        { name: '현재 응답', time: duration, color: duration > 1 ? '#ef4444' : '#22c55e' }
-      ]);
-
-      setChatHistory(prev => {
-        const updated = [...prev];
-        const lastIndex = updated.length - 1;
-        if (updated[lastIndex].isNew) {
-            updated[lastIndex] = {
-                ...updated[lastIndex],
-                ...data,
-                aiResponse: data.description,
-                responseTime: duration,
-                isNew: false
-            };
+    useEffect(() => {
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+            setIsLoggedIn(true);
         }
-        return updated;
-      });
-    } catch (err) {
-      alert("분석 실패");
-      setChatHistory(prev => prev.slice(0, prev.length - 1));
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    }, []);
 
-  const handleQuizSubmit = async (option) => {
-      if (!currentQuiz || isCorrect !== null) return;
-
-      setUserAnswer(option);
-      const correct = (option === currentQuiz.answer);
-      setIsCorrect(correct);
-
-      const idToSend = currentQuiz.quizId || currentQuiz.id || 0;
-
-      try {
-        await apiClient.post(`/api/ai/quiz/submit`, {
-          quizId: idToSend,
-          userAnswer: option
-        });
-        // 성공 시 데이터 갱신 (오답노트 데이터 반영을 위해)
-        fetchChatHistory();
-      } catch (err) {
-        console.error("퀴즈 제출 오류:", err);
-      }
+    const handleLogout = () => {
+        localStorage.removeItem('accessToken');
+        setIsLoggedIn(false);
     };
 
-  const lastAiResponse = [...chatHistory].reverse().find(c => c.aiResponse);
-
-  return (
-    <div style={styles.layout}>
-      <Header />
-      <div style={styles.splitContent}>
-        <div style={styles.leftPanel}>
-          <div style={styles.panelHeader}>
-            <span style={styles.badge}>PERFORMANCE</span>
-            <h2 style={styles.panelTitle}>응답 속도 실시간 모니터링</h2>
-          </div>
-
-          <div style={styles.chartContainer}>
-            <ResponsiveContainer width="100%" height={150}>
-              <BarChart data={performanceData} layout="vertical" margin={{left: 30, right: 30}}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" width={80} style={{fontSize: '12px'}} />
-                <Tooltip />
-                <Bar dataKey="time" radius={[0, 4, 4, 0]} barSize={20}>
-                  {performanceData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-            <div style={styles.timeInfo}>
-              현재 응답 시간: <strong>{performanceData[1].time}초</strong>
-            </div>
-          </div>
-
-          <div style={styles.contentScroll}>
-            {lastAiResponse?.imageUrl ? (
-              <img src={lastAiResponse.imageUrl} alt="Target" style={styles.mainImage} />
-            ) : previewUrl ? (
-              <img src={previewUrl} alt="Preview" style={styles.mainImage} />
-            ) : (
-              <div style={styles.emptyCard}>📎 학습 자료를 업로드하세요.</div>
-            )}
-            <div style={styles.analysisCard}>
-              <div className="markdown-body">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {lastAiResponse?.aiResponse || "분석 결과가 여기에 표시됩니다."}
-                </ReactMarkdown>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style={styles.rightPanel}>
-          <div style={styles.chatHeader}>
-            <span style={styles.statusDot}></span>
-            <strong>AI 튜터와 대화하기</strong>
-          </div>
-          <div style={styles.chatBox}>
-            {chatHistory.map((chat, i) => (
-              <React.Fragment key={i}>
-                {chat?.userPrompt && (
-                  <div style={styles.chatRow(true)}>
-                    <div style={styles.bubble(true)}>{chat.userPrompt}</div>
-                  </div>
+    return (
+        <div style={styles.layout}>
+            <div style={styles.topNav} className="top-nav-mobile">
+                {isLoggedIn ? (
+                    <button style={styles.authBtn} onClick={handleLogout}>
+                        로그아웃
+                    </button>
+                ) : (
+                    <>
+                        <button style={styles.authBtn} onClick={() => navigate('/login')}>
+                            로그인
+                        </button>
+                        <button style={styles.authBtnPrimary} onClick={() => navigate('/signup')}>
+                            회원가입
+                        </button>
+                    </>
                 )}
-                {chat.aiResponse && (
-                  <div style={styles.chatRow(false)}>
-                    <div style={styles.bubble(false)}>
-                      <div>분석 완료! 퀴즈를 풀어보세요.</div>
-                      {chat.quizDto && (
-                        <button onClick={() => {
-                          setCurrentQuiz(chat.quizDto);
-                          setShowQuiz(true);
-                          setIsCorrect(null);
-                          setUserAnswer(null);
-                        }} style={styles.quizOpenBtn}>📝 퀴즈 풀기</button>
-                      )}
+            </div>
+
+            <div style={styles.content} className="main-content-mobile">
+                <div style={styles.heroSection}>
+                    <h1 style={styles.heroTitle} className="hero-title-mobile">
+                        당신만의 스마트한<br/>학습 보조 튜터, <span style={styles.highlight}>Flow</span>
+                    </h1>
+                    <p style={styles.heroSubtitle} className="hero-subtitle-mobile">
+                        AI가 만들어주는 오답노트부터 실시간 질의응답까지, 지금 바로 시작해보세요.
+                    </p>
+
+                    <div style={styles.menuGrid} className="menu-grid-mobile">
+                        <div style={styles.menuCard} className="menu-card-hover menu-card-mobile" onClick={() => navigate('/ai-tutor')}>
+                            <div style={styles.cardIcon}>🤖</div>
+                            <div>
+                                <h3 style={styles.cardTitle}>스마트 AI 튜터</h3>
+                                <p style={styles.cardDesc}>모르는 문제를 사진으로 찍어 올리면 AI가 즉시 분석해 줍니다.</p>
+                            </div>
+                        </div>
+
+                        <div style={styles.menuCard} className="menu-card-hover menu-card-mobile" onClick={() => navigate('/wrong-notes')}>
+                            <div style={styles.cardIcon}>📝</div>
+                            <div>
+                                <h3 style={styles.cardTitle}>오답노트</h3>
+                                <p style={styles.cardDesc}>틀린 문제만 모아서 나만의 오답노트를 자동으로 생성합니다.</p>
+                            </div>
+                        </div>
+
+                        <div style={styles.menuCard} className="menu-card-hover menu-card-mobile" onClick={() => navigate('/board')}>
+                            <div style={styles.cardIcon}>📋</div>
+                            <div>
+                                <h3 style={styles.cardTitle}>스터디 게시판</h3>
+                                <p style={styles.cardDesc}>다른 학습자들과 함께 지식을 공유하고 소통해보세요.</p>
+                            </div>
+                        </div>
+
+                        <div style={styles.menuCard} className="menu-card-hover menu-card-mobile" onClick={() => navigate('/map')}>
+                            <div style={styles.cardIcon}>🗺️</div>
+                            <div>
+                                <h3 style={styles.cardTitle}>지도 AI</h3>
+                                <p style={styles.cardDesc}>내 주변의 스터디 카페나 도서관을 찾아줍니다.</p>
+                            </div>
+                        </div>
                     </div>
-                  </div>
-                )}
-              </React.Fragment>
-            ))}
-            {isLoading && <div style={styles.chatRow(false)}><div style={styles.bubble(false)}>분석 중... ⏳</div></div>}
-            <div ref={chatEndRef} />
-          </div>
-          <div style={styles.inputWrapper}>
-            <div style={styles.inputArea}>
-              <input type="file" ref={fileInputRef} onChange={(e) => {
-                const file = e.target.files[0];
-                if(file) { setSelectedFile(file); setPreviewUrl(URL.createObjectURL(file)); }
-              }} style={{display:'none'}} />
-              <button onClick={() => fileInputRef.current.click()} style={styles.iconBtn}>📎</button>
-              <input style={styles.input} value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !isLoading && handleAIChat()} placeholder="질문을 입력하세요..." />
-              <button onClick={handleAIChat} style={styles.sendBtn} disabled={isLoading}>전송</button>
+                </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      {showQuiz && currentQuiz && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalContent}>
-            <h3 style={{color: '#4285F4'}}>🎯 실력 확인 퀴즈</h3>
-            <p style={styles.quizQuestion}>{currentQuiz.question}</p>
-            <div style={styles.optionList}>
-              {currentQuiz.options.map((opt, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleQuizSubmit(opt)}
-                  style={styles.optionBtn(userAnswer === opt, isCorrect, opt === currentQuiz.answer)}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-            {isCorrect !== null && (
-              <p style={styles.resultText(isCorrect)}>
-                {isCorrect ? "정답입니다! 👏" : `아쉽네요! 정답은 [${currentQuiz.answer}] 입니다. 오답노트에 추가됩니다!`}
-              </p>
-            )}
-            <button onClick={() => setShowQuiz(false)} style={styles.modalCloseBtn}>닫기</button>
-          </div>
+            <style>{`
+                .menu-card-hover:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 20px 40px -10px rgba(0,0,0,0.1) !important;
+                    border-color: #e0e7ff !important;
+                }
+
+                @media screen and (max-width: 768px) {
+                    .top-nav-mobile {
+                        padding: 15px 20px !important;
+                    }
+                    .main-content-mobile {
+                        padding: 10px 20px 60px 20px !important;
+                    }
+                    .hero-title-mobile { font-size: 28px !important; }
+                    .hero-subtitle-mobile { font-size: 15px !important; margin-bottom: 30px !important; word-break: keep-all; }
+
+                    .menu-grid-mobile {
+                        display: flex !important;
+                        flex-direction: column !important;
+                        gap: 16px !important;
+                    }
+                    .menu-card-mobile {
+                        padding: 20px !important;
+                        display: flex !important;
+                        flex-direction: row !important;
+                        align-items: center !important;
+                        gap: 16px !important;
+                        text-align: left !important;
+                        width: 100% !important;
+                        box-sizing: border-box !important;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important;
+                    }
+                    .menu-card-mobile .cardIcon {
+                        width: 56px !important;
+                        height: 56px !important;
+                        font-size: 28px !important;
+                        margin-bottom: 0 !important;
+                        flex-shrink: 0;
+                    }
+                    .menu-card-mobile h3 { font-size: 17px !important; margin-top: 0 !important; margin-bottom: 4px !important; }
+                    .menu-card-mobile p { font-size: 13px !important; margin: 0 !important; }
+                }
+            `}</style>
         </div>
-      )}
-    </div>
-  );
-}
+    );
+};
 
 const styles = {
-  layout: { width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f8fafc', overflow: 'hidden' },
-  splitContent: { display: 'grid', gridTemplateColumns: '55% 45%', height: 'calc(100vh - 64px)', overflow: 'hidden' },
-  leftPanel: { backgroundColor: '#ffffff', borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', padding: '24px', overflowY: 'auto' },
-  panelHeader: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '15px' },
-  badge: { backgroundColor: '#f59e0b', color: '#fff', padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' },
-  panelTitle: { fontSize: '18px', fontWeight: 'bold', color: '#1e293b', margin: 0 },
-  chartContainer: { backgroundColor: '#f8fafc', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e2e8f0' },
-  timeInfo: { textAlign: 'center', marginTop: '10px', fontSize: '14px', color: '#475569' },
-  contentScroll: { flex: 1 },
-  mainImage: { width: '100%', maxHeight: '350px', objectFit: 'contain', borderRadius: '12px', marginBottom: '20px', backgroundColor: '#f1f5f9' },
-  emptyCard: { height: '150px', backgroundColor: '#f1f5f9', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', border: '2px dashed #cbd5e1' },
-  analysisCard: { backgroundColor: '#fff', borderRadius: '12px', color: '#334155', paddingBottom: '40px' },
-  rightPanel: { display: 'flex', flexDirection: 'column', backgroundColor: '#f1f5f9', height: '100%', overflow: 'hidden' },
-  chatHeader: { padding: '16px 20px', backgroundColor: '#fff', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' },
-  statusDot: { width: '8px', height: '8px', backgroundColor: '#22c55e', borderRadius: '50%' },
-  chatBox: { flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' },
-  chatRow: (isUser) => ({ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start' }),
-  bubble: (isUser) => ({ padding: '12px 16px', borderRadius: isUser ? '16px 16px 0 16px' : '16px 16px 16px 0', maxWidth: '85%', backgroundColor: isUser ? '#4285F4' : '#fff', color: isUser ? '#fff' : '#1e293b', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', border: isUser ? 'none' : '1px solid #e2e8f0' }),
-  inputWrapper: { padding: '16px 20px', backgroundColor: '#fff', borderTop: '1px solid #e2e8f0' },
-  inputArea: { display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: '#f8fafc', padding: '8px 16px', borderRadius: '24px', border: '1px solid #e2e8f0' },
-  input: { flex: 1, border: 'none', outline: 'none', backgroundColor: 'transparent', fontSize: '15px' },
-  sendBtn: { backgroundColor: '#4285F4', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: '18px', fontWeight: 'bold', cursor: 'pointer' },
-  iconBtn: { background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748b' },
-  quizOpenBtn: { marginTop: '10px', width: '100%', padding: '10px', backgroundColor: '#f0f7ff', border: '1px solid #4285F4', color: '#4285F4', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
-  modalOverlay: { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0, 0, 0, 0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 },
-  modalContent: { backgroundColor: '#fff', padding: '32px', borderRadius: '16px', width: '450px', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', position: 'relative', zIndex: 10000 },
-  quizQuestion: { fontWeight: 'bold', fontSize: '18px', margin: '24px 0', color: '#1e293b' },
-  optionList: { display: 'flex', flexDirection: 'column', gap: '10px' },
-  optionBtn: (isSelected, isCorrect, isAnswer) => ({
-    padding: '14px', borderRadius: '10px', border: '1px solid #e2e8f0', cursor: 'pointer', width: '100%', fontSize: '15px', textAlign: 'left', transition: 'all 0.2s ease',
-    backgroundColor: isSelected ? (isCorrect ? '#dcfce7' : '#fee2e2') : (isCorrect !== null && isAnswer ? '#dcfce7' : '#fff'),
-    borderColor: isSelected ? (isCorrect ? '#22c55e' : '#ef4444') : '#e2e8f0',
-    pointerEvents: isCorrect !== null ? 'none' : 'auto'
-  }),
-  resultText: (isCorrect) => ({ marginTop: '15px', color: isCorrect ? '#22c55e' : '#ef4444', fontWeight: 'bold' }),
-  modalCloseBtn: { marginTop: '24px', padding: '10px 24px', backgroundColor: '#64748b', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }
+    layout: { width: '100vw', height: '100dvh', display: 'flex', flexDirection: 'column', backgroundColor: '#f8fafc', overflow: 'hidden' },
+    topNav: { width: '100%', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '20px 40px', boxSizing: 'border-box', gap: '12px' },
+    authBtn: { background: 'transparent', border: 'none', fontSize: '14px', fontWeight: '600', color: '#64748b', cursor: 'pointer', padding: '8px 12px', transition: 'color 0.2s' },
+    authBtnPrimary: { background: '#4f46e5', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', color: '#ffffff', cursor: 'pointer', padding: '8px 16px', transition: 'background 0.2s', boxShadow: '0 2px 4px rgba(79, 70, 229, 0.2)' },
+    content: { flex: 1, display: 'flex', justifyContent: 'center', padding: '20px 20px 50px 20px', overflowY: 'auto' },
+    heroSection: { maxWidth: '1000px', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' },
+    heroTitle: { fontSize: '42px', fontWeight: '800', color: '#1e293b', lineHeight: '1.3', marginBottom: '20px' },
+    highlight: { color: '#4f46e5' },
+    heroSubtitle: { fontSize: '18px', color: '#64748b', marginBottom: '50px' },
+    menuGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px', width: '100%' },
+    menuCard: { background: '#fff', padding: '32px', borderRadius: '24px', boxShadow: '0 8px 24px -10px rgba(0,0,0,0.05)', cursor: 'pointer', transition: 'all 0.3s ease', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', alignItems: 'center' },
+    cardIcon: { fontSize: '40px', marginBottom: '20px', background: '#f8fafc', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '24px' },
+    cardTitle: { margin: '0 0 10px 0', fontSize: '20px', color: '#1e293b', fontWeight: '700' },
+    cardDesc: { margin: 0, color: '#64748b', fontSize: '15px', lineHeight: '1.5' }
 };
 
 export default MainPage;

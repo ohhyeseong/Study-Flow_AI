@@ -8,13 +8,10 @@ const AiChatPage = () => {
     const [messages, setMessages] = useState([]);
     const [inputMessage, setInputMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-
     const [selectedFile, setSelectedFile] = useState(null);
     const fileInputRef = useRef(null);
-
     const messagesEndRef = useRef(null);
 
-    // 대화 내역 불러오기
     useEffect(() => {
         const fetchHistory = async () => {
             const welcomeMessage = {
@@ -26,11 +23,13 @@ const AiChatPage = () => {
                 const response = await apiClient.get('/api/ai/history');
                 const historyData = response.data.data || response.data;
 
-                if (historyData && historyData.length > 0) {
+                if (Array.isArray(historyData) && historyData.length > 0) {
                     const formattedHistory = [];
                     historyData.forEach(item => {
-                        const userText = item.prompt || item.question || "";
-                        const aiText = item.answer || "";
+                        // 사용자 질문 탐색 (백엔드에서 사용 가능한 모든 키 체크)
+                        const userText = item.prompt || item.question || item.content || item.userMessage || item.input || "";
+                        // AI 답변 탐색
+                        const aiText = item.answer || item.description || item.aiResponse || item.output || "";
 
                         if (userText) formattedHistory.push({ role: 'user', content: userText });
                         if (aiText) formattedHistory.push({ role: 'ai', content: aiText });
@@ -41,7 +40,6 @@ const AiChatPage = () => {
                     setMessages([welcomeMessage]);
                 }
             } catch (error) {
-                console.error("이전 대화 내역 불러오기 실패:", error);
                 setMessages([welcomeMessage]);
             }
         };
@@ -53,19 +51,17 @@ const AiChatPage = () => {
         if (e.target.files && e.target.files[0]) {
             setSelectedFile(e.target.files[0]);
         }
-        e.target.value = null; // 같은 파일 재선택 가능하게 처리
+        e.target.value = null;
     };
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
 
-        // 텍스트도 없고 파일도 없으면 무시
         if (!inputMessage.trim() && !selectedFile) return;
 
         const currentMessage = inputMessage;
         let displayMessage = currentMessage;
 
-        // 화면에 보여줄 내 메시지 포맷팅
         if (selectedFile) {
             displayMessage = currentMessage
                 ? `[이미지 첨부됨] ${currentMessage}`
@@ -75,7 +71,6 @@ const AiChatPage = () => {
         const userMsg = { role: 'user', content: displayMessage };
         setMessages(prev => [...prev, userMsg]);
 
-        // 전송 직전 상태 초기화
         setInputMessage('');
         const fileToSend = selectedFile;
         setSelectedFile(null);
@@ -84,30 +79,24 @@ const AiChatPage = () => {
         try {
             const formData = new FormData();
 
-            // 💡 [핵심] 텍스트와 이미지 분기 처리
             if (currentMessage.trim()) {
-                // 1. 텍스트가 있을 경우 프롬프트에 추가
                 formData.append('prompt', currentMessage);
             } else if (fileToSend) {
-                // 2. 텍스트 없이 이미지만 보낼 경우 (AI가 분석하려면 기본 문구가 필요함)
                 formData.append('prompt', '첨부된 이미지를 분석해 주세요.');
             }
 
             if (fileToSend) {
-                // 3. 파일이 있을 경우에만 파일 데이터 추가
                 formData.append('file', fileToSend);
             }
 
-            // 💡 [핵심] Axios에서는 multipart/form-data 헤더를 수동으로 넣으면 안 됩니다! (자동으로 Boundary가 생성됨)
             const response = await apiClient.post('/api/ai/analyze', formData);
 
             const aiMsg = {
                 role: 'ai',
-                content: response.data?.data?.answer || response.data?.answer || "결과를 가져오지 못했습니다."
+                content: response.data?.data?.description || response.data?.description || "결과를 가져오지 못했습니다."
             };
             setMessages(prev => [...prev, aiMsg]);
         } catch (error) {
-            console.error("AI 튜터 통신 에러:", error);
             setMessages(prev => [...prev, { role: 'ai', content: "죄송합니다. 서버 연결 또는 분석 중 문제가 발생했습니다." }]);
         } finally {
             setIsLoading(false);
@@ -119,26 +108,26 @@ const AiChatPage = () => {
     }, [messages, isLoading]);
 
     return (
-        <div style={styles.layout}>
+        <div className="ai-layout">
             <Header />
-            <div style={styles.content}>
-                <div style={styles.chatCard}>
-                    <div style={styles.chatHeader}>
-                        <div style={styles.aiBadge}>🤖</div>
-                        <div style={styles.chatTitleBlock}>
-                            <h3 style={styles.chatTitle}>스마트 AI 튜터</h3>
-                            <span style={styles.chatStatus}>{isLoading ? '데이터를 분석하는 중...' : '대기 중'}</span>
+            <div className="ai-content">
+                <div className="ai-chat-card">
+                    <div className="ai-chat-header">
+                        <div className="ai-badge">🤖</div>
+                        <div className="ai-chat-title-block">
+                            <h3 className="ai-chat-title">스마트 AI 튜터</h3>
+                            <span className="ai-chat-status">{isLoading ? '데이터를 분석하는 중...' : '대기 중'}</span>
                         </div>
                     </div>
 
-                    <div style={styles.chatWindow}>
+                    <div className="ai-chat-window">
                         {messages.map((msg, index) => (
-                            <div key={index} style={msg.role === 'user' ? styles.myMsgRow : styles.aiMsgRow}>
+                            <div key={index} className={msg.role === 'user' ? 'ai-my-msg-row' : 'ai-ai-msg-row'}>
                                 {msg.role === 'ai' && (
-                                    <div style={styles.aiAvatar}>Flow</div>
+                                    <div className="ai-avatar">Flow</div>
                                 )}
-                                <div style={msg.role === 'user' ? styles.myBubble : styles.aiBubble}>
-                                    <ReactMarkdown remarkPlugins={[remarkGfm]} style={styles.markdownContent}>
+                                <div className={msg.role === 'user' ? 'ai-my-bubble' : 'ai-ai-bubble'}>
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                         {msg.content}
                                     </ReactMarkdown>
                                 </div>
@@ -146,10 +135,10 @@ const AiChatPage = () => {
                         ))}
 
                         {isLoading && (
-                            <div style={styles.aiMsgRow}>
-                                <div style={styles.aiAvatar}>Flow</div>
-                                <div style={styles.aiBubble}>
-                                    <div style={styles.typingIndicator} className="typing-dots">
+                            <div className="ai-ai-msg-row">
+                                <div className="ai-avatar">Flow</div>
+                                <div className="ai-ai-bubble">
+                                    <div className="typing-dots">
                                         <span></span>
                                         <span></span>
                                         <span></span>
@@ -160,15 +149,15 @@ const AiChatPage = () => {
                         <div ref={messagesEndRef} />
                     </div>
 
-                    <div style={styles.inputWrapper}>
+                    <div className="ai-input-wrapper">
                         {selectedFile && (
-                            <div style={styles.filePreview}>
-                                <span style={styles.fileName}>🖼️ {selectedFile.name}</span>
-                                <button type="button" onClick={() => setSelectedFile(null)} style={styles.fileRemoveBtn}>✕</button>
+                            <div className="ai-file-preview">
+                                <span className="ai-file-name">🖼️ {selectedFile.name}</span>
+                                <button type="button" onClick={() => setSelectedFile(null)} className="ai-file-remove-btn">✕</button>
                             </div>
                         )}
 
-                        <form onSubmit={handleSendMessage} style={styles.inputArea}>
+                        <form onSubmit={handleSendMessage} className="ai-input-area">
                             <input
                                 type="file"
                                 accept="image/*"
@@ -180,7 +169,7 @@ const AiChatPage = () => {
                             <button
                                 type="button"
                                 onClick={() => fileInputRef.current.click()}
-                                style={styles.attachBtn}
+                                className="ai-attach-btn"
                                 title="이미지 첨부"
                             >
                                 📷
@@ -191,9 +180,9 @@ const AiChatPage = () => {
                                 value={inputMessage}
                                 onChange={(e) => setInputMessage(e.target.value)}
                                 placeholder="무엇이든 물어보세요! (이미지 분석도 가능해요)"
-                                style={styles.chatInput}
+                                className="ai-chat-input"
                             />
-                            <button type="submit" disabled={isLoading || (!inputMessage.trim() && !selectedFile)} style={styles.sendBtn}>
+                            <button type="submit" disabled={isLoading || (!inputMessage.trim() && !selectedFile)} className="ai-send-btn">
                                 {isLoading ? "..." : "보내기"}
                             </button>
                         </form>
@@ -204,45 +193,51 @@ const AiChatPage = () => {
     );
 };
 
-const styles = {
-    layout: { width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f8fafc', overflow: 'hidden' },
-    content: { flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '30px 20px' },
-    chatCard: { width: '100%', maxWidth: '850px', height: '95%', backgroundColor: '#fff', borderRadius: '32px', border: '1px solid #e2e8f0', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
-    chatHeader: { padding: '24px 30px', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '15px', alignItems: 'center', backgroundColor: '#fff' },
-    aiBadge: { fontSize: '24px', backgroundColor: '#f0fdf4', width: '50px', height: '50px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-    chatTitleBlock: { display: 'flex', flexDirection: 'column', gap: '4px' },
-    chatTitle: { margin: 0, fontSize: '18px', fontWeight: '800', color: '#1e293b' },
-    chatStatus: { fontSize: '12px', color: '#22c55e', fontWeight: 'bold' },
-    chatWindow: { flex: 1, padding: '30px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px', backgroundColor: '#fcfcfc' },
-    myMsgRow: { alignSelf: 'flex-end', display: 'flex', alignItems: 'flex-end', maxWidth: '80%' },
-    aiMsgRow: { alignSelf: 'flex-start', display: 'flex', alignItems: 'flex-start', gap: '10px', maxWidth: '80%' },
-    aiAvatar: { width: '36px', height: '36px', borderRadius: '18px', backgroundColor: '#1e293b', color: '#fff', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-    myBubble: { padding: '16px 20px', borderRadius: '24px 24px 0 24px', backgroundColor: '#4285F4', color: '#fff', fontSize: '15px', lineHeight: '1.6', boxShadow: '0 4px 6px rgba(66, 133, 244, 0.2)', wordBreak: 'break-word' },
-    aiBubble: { padding: '16px 20px', borderRadius: '24px 24px 24px 0', backgroundColor: '#fff', color: '#334155', fontSize: '15px', lineHeight: '1.6', boxShadow: '0 4px 6px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9', wordBreak: 'break-word', overflowX: 'auto' },
-    markdownContent: { color: 'inherit', fontSize: 'inherit' },
-
-    inputWrapper: { display: 'flex', flexDirection: 'column', borderTop: '1px solid #f1f5f9', backgroundColor: '#fff' },
-    filePreview: { display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 30px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' },
-    fileName: { fontSize: '13px', color: '#475569', fontWeight: '600', display: 'flex', alignItems: 'center' },
-    fileRemoveBtn: { background: 'none', border: 'none', color: '#ef4444', fontSize: '14px', cursor: 'pointer', fontWeight: 'bold', padding: '2px 6px' },
-    inputArea: { padding: '15px 30px', display: 'flex', gap: '12px', alignItems: 'center' },
-    attachBtn: { width: '45px', height: '45px', borderRadius: '50%', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#64748b', fontSize: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', transition: '0.2s', flexShrink: 0 },
-    chatInput: { flex: 1, padding: '16px 24px', borderRadius: '30px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', outline: 'none', fontSize: '15px', transition: 'border 0.2s' },
-    sendBtn: { padding: '0 28px', height: '48px', backgroundColor: '#1e293b', color: '#fff', border: 'none', borderRadius: '30px', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer', transition: '0.2s', flexShrink: 0 },
-
-    typingIndicator: { display: 'flex', gap: '4px', padding: '6px 0' },
-};
-
 const cssParams = `
-@keyframes typing { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
-.typing-dots span {
-    width: 8px; height: 8px; background: #94a3b8; border-radius: 50%;
-    opacity: 0.3; display: inline-block; animation: typing 1.2s infinite;
-}
+.ai-layout { width: 100vw; height: 100vh; display: flex; flex-direction: column; background-color: #f8fafc; overflow: hidden; }
+.ai-content { flex: 1; display: flex; justify-content: center; align-items: center; padding: 30px 20px; min-height: 0; }
+.ai-chat-card { width: 100%; max-width: 850px; height: 95%; background-color: #fff; border-radius: 32px; border: 1px solid #e2e8f0; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; }
+.ai-chat-header { padding: 24px 30px; border-bottom: 1px solid #f1f5f9; display: flex; gap: 15px; align-items: center; background-color: #fff; }
+.ai-badge { font-size: 24px; background-color: #f0fdf4; width: 50px; height: 50px; border-radius: 16px; display: flex; align-items: center; justify-content: center; }
+.ai-chat-title-block { display: flex; flex-direction: column; gap: 4px; }
+.ai-chat-title { margin: 0; font-size: 18px; font-weight: 800; color: #1e293b; }
+.ai-chat-status { font-size: 12px; color: #22c55e; font-weight: bold; }
+.ai-chat-window { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; background-color: #fcfcfc; min-height: 0; }
+.ai-my-msg-row { align-self: flex-end; display: flex; align-items: flex-end; max-width: 80%; }
+.ai-ai-msg-row { align-self: flex-start; display: flex; align-items: flex-start; gap: 10px; max-width: 80%; }
+.ai-avatar { width: 36px; height: 36px; border-radius: 18px; background-color: #1e293b; color: #fff; font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ai-my-bubble { padding: 16px 20px; border-radius: 24px 24px 0 24px; background-color: #4285F4; color: #fff; font-size: 15px; line-height: 1.6; box-shadow: 0 4px 6px rgba(66, 133, 244, 0.2); word-break: break-word; }
+.ai-ai-bubble { padding: 16px 20px; border-radius: 24px 24px 24px 0; background-color: #fff; color: #334155; font-size: 15px; line-height: 1.6; box-shadow: 0 4px 6px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; word-break: break-word; overflow-x: auto; }
+.ai-input-wrapper { display: flex; flex-direction: column; border-top: 1px solid #f1f5f9; background-color: #fff; }
+.ai-file-preview { display: flex; align-items: center; gap: 10px; padding: 10px 30px; background-color: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.ai-file-name { font-size: 13px; color: #475569; font-weight: 600; display: flex; align-items: center; }
+.ai-file-remove-btn { background: none; border: none; color: #ef4444; font-size: 14px; cursor: pointer; font-weight: bold; padding: 2px 6px; }
+.ai-input-area { padding: 15px 30px; display: flex; gap: 12px; align-items: center; }
+.ai-attach-btn { width: 45px; height: 45px; border-radius: 50%; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #64748b; font-size: 20px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; flex-shrink: 0; }
+.ai-chat-input { flex: 1; padding: 16px 24px; border-radius: 30px; border: 1px solid #e2e8f0; background-color: #f8fafc; outline: none; font-size: 15px; transition: border 0.2s; min-width: 0; }
+.ai-send-btn { padding: 0 28px; height: 48px; background-color: #1e293b; color: #fff; border: none; border-radius: 30px; font-weight: bold; font-size: 15px; cursor: pointer; transition: 0.2s; flex-shrink: 0; }
+
+.typing-dots span { width: 8px; height: 8px; background: #94a3b8; border-radius: 50%; opacity: 0.3; display: inline-block; animation: typing 1.2s infinite; margin: 0 2px; }
 .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
 .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typing { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
+
+@media screen and (max-width: 768px) {
+    .ai-content { padding: 10px; }
+    .ai-chat-card { border-radius: 20px; height: 100%; }
+    .ai-chat-header { padding: 15px 20px; }
+    .ai-chat-title { font-size: 16px; }
+    .ai-chat-window { padding: 15px; gap: 15px; }
+    .ai-input-area { padding: 12px 15px; gap: 8px; }
+    .ai-my-msg-row, .ai-ai-msg-row { max-width: 90%; }
+    .ai-my-bubble, .ai-ai-bubble { font-size: 14px; padding: 12px 16px; }
+    .ai-attach-btn { width: 40px; height: 40px; font-size: 18px; }
+    .ai-chat-input { padding: 12px 16px; font-size: 14px; }
+    .ai-send-btn { padding: 0 20px; height: 40px; font-size: 14px; }
+    .ai-file-preview { padding: 8px 20px; }
+}
 `;
 
-const TypingStyle = () => <style>{cssParams}</style>;
+const AiChatStyle = () => <style>{cssParams}</style>;
 
-export default () => <><TypingStyle/><AiChatPage/></>;
+export default () => <><AiChatStyle/><AiChatPage/></>;
