@@ -2,10 +2,12 @@ package com.example.study_flow_server;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @EnableJpaAuditing
+@EnableCaching
 @SpringBootApplication
 @EnableJpaRepositories(basePackages = {
 		"com.example.study_flow_server.ai.repository",

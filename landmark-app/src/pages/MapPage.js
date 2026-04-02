@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import Header from '../components/Header';
 
 function MapPage() {
@@ -9,11 +11,11 @@ function MapPage() {
   const [aiResult, setAiResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [customPrompt, setCustomPrompt] = useState("");
-
   const [savedLandmarks, setSavedLandmarks] = useState([]);
   const [showSaved, setShowSaved] = useState(false);
   const [markers, setMarkers] = useState([]);
   const [selectedPlace, setSelectedPlace] = useState(null);
+  const [showAiModal, setShowAiModal] = useState(false);
 
   const navigate = useNavigate();
 
@@ -32,128 +34,137 @@ function MapPage() {
         setCurrentPos({ lat, lon });
         const myLoc = new window.kakao.maps.LatLng(lat, lon);
         kakaoMap.setCenter(myLoc);
-        new window.kakao.maps.Marker({ map: kakaoMap, position: myLoc });
+        new window.kakao.maps.Marker({
+          map: kakaoMap,
+          position: myLoc,
+          title: "내 위치"
+        });
       });
     }
   }, []);
 
-  const fetchAndShowSavedLandmarks = useCallback(async () => {
-    try {
-      const response = await axios.get('http://localhost:8090/api/v1/landmarks');
-      const data = response.data.data;
-      setSavedLandmarks(data);
-      setShowSaved(true);
+  const clearMarkers = () => {
+    markers.forEach(m => m.setMap(null));
+    setMarkers([]);
+  };
 
-      markers.forEach(m => m.setMap(null));
-
-      const newMarkers = data.map(place => {
-        const pos = new window.kakao.maps.LatLng(place.latitude, place.longitude);
-        const marker = new window.kakao.maps.Marker({
-          map: mapObj,
-          position: pos,
-          title: place.name
-        });
-
-        window.kakao.maps.event.addListener(marker, 'click', () => {
-          setSelectedPlace(place);
-          setAiResult(null);
-        });
-
-        return marker;
-      });
-
-      setMarkers(newMarkers);
-    } catch (error) {
-      alert("저장된 장소를 가져오지 못했습니다.");
-    }
-  }, [mapObj, markers]);
-
-  const handleAIRecommendation = useCallback(() => {
-    if (isLoading) return;
-    const finalQuery = customPrompt.trim() || "주변 가볼만한 곳을 추천하고 각 장소의 특징을 설명해줘";
-    setAiResult(null);
-    setSelectedPlace(null);
+  const handleSearchAndRecommend = useCallback((keyword) => {
+    if (isLoading || !mapObj) return;
     setIsLoading(true);
+    setAiResult(null);
+    clearMarkers();
+
     const ps = new window.kakao.maps.services.Places();
-    ps.keywordSearch('관광명소', async (data, status) => {
+    ps.keywordSearch(keyword, async (data, status) => {
       if (status === window.kakao.maps.services.Status.OK) {
-        const placeDetails = data.slice(0, 6).map(p =>
-          `- ${p.place_name} (주소: ${p.address_name}, 카테고리: ${p.category_name})`
-        ).join("\n");
+        const newMarkers = [];
+        const placeDetails = data.slice(0, 8).map(p => {
+          const pos = new window.kakao.maps.LatLng(p.y, p.x);
+          const marker = new window.kakao.maps.Marker({
+            map: mapObj,
+            position: pos,
+            title: p.place_name
+          });
+
+          window.kakao.maps.event.addListener(marker, 'click', () => {
+            setSelectedPlace({
+              name: p.place_name,
+              address: p.address_name,
+              category: p.category_name,
+              lat: p.y,
+              lng: p.x,
+              type: 'new' // 신규 검색 장소
+            });
+          });
+
+          newMarkers.push(marker);
+          return `- ${p.place_name} (주소: ${p.address_name}, 카테고리: ${p.category_name})`;
+        }).join("\n");
+
+        setMarkers(newMarkers);
+
         try {
           const response = await axios.post(`http://localhost:8090/api/v1/ai/recommend`, {
             places: placeDetails,
-            userQuery: finalQuery + " (반드시 주소 정보를 포함해서 답변해줘)"
+            userQuery: (customPrompt || keyword) + " 주변의 공부하기 좋은 장소나 쉼터를 추천해줘."
           });
           setAiResult(response.data.data.answer || response.data.answer);
-        } catch (err) { alert("AI 서버 연결 실패!"); } finally { setIsLoading(false); }
+          setShowAiModal(true);
+        } catch (err) {
+          alert("AI 추천 실패");
+        } finally {
+          setIsLoading(false);
+        }
       }
+      setIsLoading(false);
     }, { location: new window.kakao.maps.LatLng(currentPos.lat, currentPos.lon), radius: 2000 });
-  }, [customPrompt, currentPos, isLoading]);
+  }, [customPrompt, currentPos, isLoading, mapObj, markers]);
 
-  const openRoute = (place) => {
-    const url = `https://map.kakao.com/link/to/${place.name},${place.latitude},${place.longitude}`;
-    window.open(url, '_blank');
+  const fetchAndShowSavedLandmarks = async () => {
+    try {
+      const response = await axios.get('http://localhost:8090/api/v1/landmarks');
+      setSavedLandmarks(response.data.data);
+      setShowSaved(true);
+    } catch (error) {
+      alert("목록 호출 실패");
+    }
   };
 
-  const handleSaveLocation = async () => {
-    const name = prompt("저장할 장소의 이름을 입력하세요:");
-    if (!name) return;
-    const description = prompt("장소에 대한 설명을 입력하세요:", "설명 없음");
+  const handleSaveLocation = async (place) => {
+    const description = prompt(`${place.name}에 대한 메모:`, place.category || "");
+    if (description === null) return;
     try {
       await axios.post('http://localhost:8090/api/v1/landmarks/register', {
-        name, description, latitude: currentPos.lat, longitude: currentPos.lon, distance: 0.0
+        name: place.name,
+        description: description,
+        latitude: place.lat,
+        longitude: place.lng,
+        distance: 0.0
       });
-      alert("✅ 위치 저장 완료!");
+      alert("✅ 저장 완료!");
       fetchAndShowSavedLandmarks();
     } catch (error) { alert("❌ 저장 실패"); }
   };
 
-  // 로그인 상태 체크 임시 추가 (사용하지 않던 navigate 활용)
-  useEffect(() => {
-      const token = localStorage.getItem('token');
-      if (!token || token === "undefined") {
-        navigate('/login');
-      }
-  }, [navigate]);
+  const openKakaoRoute = (place) => {
+    const url = `https://map.kakao.com/link/to/${place.name},${place.lat || place.latitude},${place.lng || place.longitude}`;
+    window.open(url, '_blank');
+  };
 
   return (
-    <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={styles.layout}>
       <Header />
-
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-        {/* AI 입력창 */}
-        <div style={aiInputAreaStyle}>
+      <div style={styles.mapContainer}>
+        <div style={styles.floatingSearch}>
           <input
             type="text"
-            placeholder="어떤 장소를 찾으시나요?"
+            placeholder="장소나 키워드를 입력하세요"
             value={customPrompt}
             onChange={(e) => setCustomPrompt(e.target.value)}
-            style={inputStyle}
-            onKeyDown={(e) => e.key === 'Enter' && handleAIRecommendation()}
+            style={styles.searchInput}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearchAndRecommend(customPrompt)}
           />
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-            <button onClick={handleAIRecommendation} style={buttonStyle("#4285F4", "white")}>
-              {isLoading ? "🤖 분석 중..." : "✨ AI 추천받기"}
-            </button>
-            <button onClick={handleSaveLocation} style={buttonStyle("#fee500", "black")}>📍 학원 추천하기</button>
-            <button onClick={fetchAndShowSavedLandmarks} style={buttonStyle("#34a853", "white")}>📚 학원 추천 목록</button>
+          <div style={styles.btnRow}>
+            <button onClick={() => handleSearchAndRecommend("학원")} style={styles.aiBtn}>🎓 학원</button>
+            <button onClick={() => handleSearchAndRecommend("스터디카페")} style={styles.aiBtn}>✍️ 스터디카페</button>
+            <button onClick={() => handleSearchAndRecommend("공원")} style={{...styles.aiBtn, backgroundColor: '#34a853'}}>🌳 쉼터</button>
+            <button onClick={fetchAndShowSavedLandmarks} style={styles.listBtn}>📚 내 목록</button>
           </div>
         </div>
 
         {showSaved && (
-          <div style={sidebarStyle}>
-            <div style={{display:'flex', justifyContent:'space-between', marginBottom:'10px'}}>
-              <strong style={{fontSize:'16px'}}>추천 목록</strong>
-              <button onClick={()=>setShowSaved(false)} style={{border:'none', background:'none', cursor:'pointer'}}>X</button>
+          <div style={styles.sidebar}>
+            <div style={styles.sidebarHeader}>
+              <strong>내 스터디 맵</strong>
+              <button onClick={()=>setShowSaved(false)} style={styles.closeX}>✕</button>
             </div>
-            <div style={{overflowY:'auto', maxHeight:'80vh'}}>
-              {savedLandmarks.length === 0 ? <p style={{fontSize:'12px'}}>저장된 장소가 없습니다.</p> :
+            <div style={styles.sidebarBody}>
+              {savedLandmarks.length === 0 ? <p style={{fontSize:'12px', textAlign:'center', color:'#999'}}>저장된 장소가 없습니다.</p> :
                 savedLandmarks.map(place => (
-                  <div key={place.id} style={listItemStyle} onClick={() => {
-                    mapObj.panTo(new window.kakao.maps.LatLng(place.latitude, place.longitude));
-                    setSelectedPlace(place);
-                    setAiResult(null);
+                  <div key={place.id} style={styles.listItem} onClick={() => {
+                    const moveLatLng = new window.kakao.maps.LatLng(place.latitude, place.longitude);
+                    mapObj.panTo(moveLatLng);
+                    setSelectedPlace({...place, type: 'saved'});
                   }}>
                     <div style={{fontWeight:'bold', fontSize:'14px'}}>{place.name}</div>
                     <div style={{fontSize:'12px', color:'#666'}}>{place.description}</div>
@@ -165,27 +176,36 @@ function MapPage() {
         )}
 
         {selectedPlace && (
-          <div style={resultCardStyle}>
-            <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px', color: '#34a853' }}>📍 저장된 장소 정보</div>
-            <div style={{ marginBottom: '10px' }}>
-              <div style={{ fontSize: '15px', fontWeight: 'bold' }}>{selectedPlace.name}</div>
-              <div style={{ fontSize: '13px', color: '#666' }}>{selectedPlace.description}</div>
+          <div style={styles.resultCard}>
+            <div style={styles.cardHeader}>{selectedPlace.type === 'saved' ? '📌 저장된 장소' : '📍 검색 결과'}</div>
+            <div style={{margin:'12px 0'}}>
+              <div style={{fontSize:'18px', fontWeight:'bold', color:'#1e293b'}}>{selectedPlace.name}</div>
+              <div style={{fontSize:'13px', color:'#64748b', marginTop:'4px'}}>{selectedPlace.address || selectedPlace.description}</div>
             </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => openRoute(selectedPlace)} style={actionButtonStyle("#fee500", "#333")}>🚗 길찾기 시작</button>
-              <button onClick={() => window.open(`https://map.kakao.com/link/search/${encodeURIComponent(selectedPlace.name)}`, '_blank')} style={actionButtonStyle("#eee", "#333")}>🔍 상세검색</button>
+            <div style={{display:'flex', gap:'8px'}}>
+              <button onClick={() => openKakaoRoute(selectedPlace)} style={styles.routeBtn}>🚗 길안내 시작</button>
+              {selectedPlace.type !== 'saved' && (
+                <button onClick={() => handleSaveLocation(selectedPlace)} style={styles.saveBtn}>⭐ 저장</button>
+              )}
+              <button onClick={() => setSelectedPlace(null)} style={styles.cardCloseBtn}>닫기</button>
             </div>
-            <button onClick={() => setSelectedPlace(null)} style={closeButtonStyle}>닫기</button>
           </div>
         )}
 
-        {aiResult && (
-          <div style={resultCardStyle}>
-            <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px', color: '#4285F4' }}>🤖 AI 가이드 추천</div>
-            <div style={{ fontSize: '14px', lineHeight: '1.6', maxHeight: '200px', overflowY: 'auto', marginBottom: '15px', color: '#333' }}>
-              {aiResult}
+        {showAiModal && aiResult && (
+          <div style={styles.modalOverlay}>
+            <div style={styles.modalContent}>
+              <div style={styles.modalHeader}>
+                <h3 style={{margin:0}}>🤖 AI 추천 가이드</h3>
+                <button onClick={() => setShowAiModal(false)} style={styles.closeX}>✕</button>
+              </div>
+              <div style={styles.modalBody}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{aiResult}</ReactMarkdown>
+              </div>
+              <div style={styles.modalFooter}>
+                <button onClick={() => setShowAiModal(false)} style={styles.confirmBtn}>확인</button>
+              </div>
             </div>
-            <button onClick={() => setAiResult(null)} style={closeButtonStyle}>닫기</button>
           </div>
         )}
 
@@ -195,13 +215,30 @@ function MapPage() {
   );
 }
 
-const actionButtonStyle = (bg, color) => ({ flex: 1, padding: '10px', backgroundColor: bg, color: color, border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' });
-const aiInputAreaStyle = { position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 100, display: 'flex', flexDirection: 'column', gap: '10px', width: '90%', maxWidth: '600px' };
-const inputStyle = { padding: '15px 20px', borderRadius: '30px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.2)', outline: 'none' };
-const buttonStyle = (bg, color) => ({ padding: '10px 15px', backgroundColor: bg, color: color, border: 'none', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize:'13px' });
-const resultCardStyle = { position: 'absolute', bottom: '30px', left: '50%', transform: 'translateX(-50%)', zIndex: 101, width: '90%', maxWidth: '450px', padding: '20px', backgroundColor: 'white', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' };
-const sidebarStyle = { position: 'absolute', top: '150px', right: '20px', zIndex: 1001, width: '250px', backgroundColor: 'white', borderRadius: '15px', padding: '15px', boxShadow: '0 4px 15px rgba(0,0,0,0.2)', maxHeight: '70vh' };
-const listItemStyle = { padding: '10px', borderBottom: '1px solid #eee', cursor: 'pointer', transition: 'background 0.2s', borderRadius: '8px' };
-const closeButtonStyle = { marginTop: '10px', width: '100%', padding: '8px', border: 'none', borderRadius: '10px', cursor: 'pointer', color: '#999', fontSize: '12px' };
+const styles = {
+  layout: { width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
+  mapContainer: { flex: 1, position: 'relative' },
+  floatingSearch: { position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 100, width: '90%', maxWidth: '650px', display: 'flex', flexDirection: 'column', gap: '10px' },
+  searchInput: { padding: '15px 25px', borderRadius: '30px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', outline: 'none', fontSize: '15px' },
+  btnRow: { display: 'flex', gap: '8px', justifyContent: 'center' },
+  aiBtn: { padding: '10px 20px', backgroundColor: '#4285F4', color: '#fff', border: 'none', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' },
+  listBtn: { padding: '10px 20px', backgroundColor: '#334155', color: '#fff', border: 'none', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' },
+  sidebar: { position: 'absolute', top: '150px', right: '20px', zIndex: 1001, width: '280px', backgroundColor: '#fff', borderRadius: '24px', padding: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', maxHeight: '60vh', display:'flex', flexDirection:'column' },
+  sidebarHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' },
+  sidebarBody: { overflowY: 'auto', flex: 1 },
+  listItem: { padding: '14px', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.2s' },
+  closeX: { border: 'none', background: 'none', fontSize: '18px', cursor: 'pointer', color: '#94a3b8' },
+  resultCard: { position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)', zIndex: 102, width: '90%', maxWidth: '420px', padding: '25px', backgroundColor: '#fff', borderRadius: '28px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' },
+  cardHeader: { fontSize: '12px', fontWeight: 'bold', color: '#4285F4', letterSpacing: '1px' },
+  routeBtn: { flex: 1.5, padding: '12px', backgroundColor: '#fee500', color: '#333', border: 'none', borderRadius: '14px', fontWeight: 'bold', cursor: 'pointer' },
+  saveBtn: { flex: 1, padding: '12px', backgroundColor: '#4285F4', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: 'bold', cursor: 'pointer' },
+  cardCloseBtn: { padding: '12px 18px', backgroundColor: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '14px', cursor: 'pointer' },
+  modalOverlay: { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000 },
+  modalContent: { backgroundColor: '#fff', width: '90%', maxWidth: '500px', borderRadius: '28px', overflow: 'hidden' },
+  modalHeader: { padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  modalBody: { padding: '24px', maxHeight: '50vh', overflowY: 'auto', fontSize:'15px' },
+  modalFooter: { padding: '15px 24px', borderTop: '1px solid #f1f5f9', textAlign: 'right' },
+  confirmBtn: { padding: '12px 25px', backgroundColor: '#4285F4', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }
+};
 
 export default MapPage;
