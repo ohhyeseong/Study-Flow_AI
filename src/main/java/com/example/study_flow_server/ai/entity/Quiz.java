@@ -37,7 +37,12 @@ public class Quiz {
     private String answer;
 
     public AiQuizDto toAiQuizDto() {
-        return new AiQuizDto(this.id,this.question, new ArrayList<>(this.options), this.answer);
+        return new AiQuizDto(
+                this.id,
+                this.question,
+                new ArrayList<>(this.options),
+                this.answer
+        );
     }
 
     @Builder

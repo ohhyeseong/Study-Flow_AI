@@ -6,20 +6,21 @@ import com.example.study_flow_server.ai.dto.WrongNoteResponse;
 import com.example.study_flow_server.ai.entity.SolveStatus;
 import com.example.study_flow_server.ai.repository.AiHistoryRepository;
 import com.example.study_flow_server.ai.repository.QuizResultRepository;
-import com.example.study_flow_server.global.exception.CustomException;
-import com.example.study_flow_server.global.exception.ErrorCode;
 import com.example.study_flow_server.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StopWatch;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,23 +35,52 @@ public class AiService {
     private final AiDatabaseService aiDatabaseService;
     private final QuizResultRepository quizResultRepository;
 
+    // 💡 수정: 파일이 null일 때 Redis 키 생성 시 에러가 나지 않도록 조건부 처리
     @Transactional
+    @Cacheable(value = "aiAnalysis", key = "#prompt + (#file != null ? #file.getOriginalFilename() : 'no_file')")
     public AiResponseDto analyzeImage(User user, MultipartFile file, String prompt) {
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
 
-        MultipartBodyBuilder builder = createMultipartBody(file, prompt);
+        // 💡 수정: 로깅 시 null 체크
+        String fileName = (file != null && !file.isEmpty()) ? file.getOriginalFilename() : "첨부파일 없음";
+        log.info(">>> AI 서버 호출 시작: {}", fileName);
 
-        try {
-            AiResponseDto response = requestAnalysisToAiServer(builder);
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        builder.part("prompt", prompt); // 프롬프트는 항상 보냄
 
-            return aiDatabaseService.saveAnalysisResult(user, prompt, response);
-
-        } catch (CustomException e) {
-            throw e;
-        } catch (WebClientResponseException e) {
-            throw new CustomException(ErrorCode.AI_SERVER_ERROR);
-        } catch (Exception e) {
-            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        // 💡 수정: 파일이 실제로 존재할 때만 파트 추가
+        if (file != null && !file.isEmpty()) {
+            try {
+                builder.part("file", new ByteArrayResource(file.getBytes()))
+                        .filename(file.getOriginalFilename())
+                        .contentType(MediaType.parseMediaType(file.getContentType()));
+            } catch (IOException e) {
+                throw new RuntimeException("파일 처리 중 오류가 발생했습니다.", e);
+            }
         }
+
+        AiResponseDto responseDto = webClient.post()
+                .uri("/api/v1/analyze-image")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(builder.build()))
+                .retrieve()
+                .bodyToMono(AiResponseDto.class)
+                .block();
+
+        stopWatch.stop();
+        double totalTime = stopWatch.getTotalTimeSeconds();
+
+        System.out.println("======= PERFORMANCE METRIC =======");
+        System.out.println("AI Analysis Time: " + totalTime + "s");
+        System.out.println("==================================");
+
+        if (responseDto != null) {
+            responseDto = responseDto.withResponseTime(totalTime);
+            aiDatabaseService.saveAnalysisResult(user, prompt, responseDto);
+        }
+
+        return responseDto;
     }
 
     public List<AiHistoryResponseDto> getHistoryList(Long userId) {
@@ -67,29 +97,8 @@ public class AiService {
                 .collect(Collectors.toList());
     }
 
-    private MultipartBodyBuilder createMultipartBody(MultipartFile file, String prompt) {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        if (file != null && !file.isEmpty()) {
-            builder.part("file", file.getResource()).filename(file.getOriginalFilename());
-        }
-        builder.part("prompt", prompt);
-        return builder;
-    }
-
-    private AiResponseDto requestAnalysisToAiServer(MultipartBodyBuilder builder) {
-        return webClient.post()
-                .uri("/api/v1/analyze-image")
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .body(BodyInserters.fromMultipartData(builder.build()))
-                .retrieve()
-                .bodyToMono(AiResponseDto.class)
-                .blockOptional()
-                .orElseThrow(() -> new CustomException(ErrorCode.AI_SERVER_ERROR));
-    }
-
     @Transactional
     public void deleteWrongNote(Long userId, Long quizId) {
         quizResultRepository.deleteByUserIdAndQuizId(userId, quizId);
-        log.info(">>> 오답노트 삭제 완료 - 유저: {}, 퀴즈: {}", userId, quizId);
     }
 }

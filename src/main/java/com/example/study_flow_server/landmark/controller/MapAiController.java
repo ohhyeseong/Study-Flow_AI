@@ -3,6 +3,7 @@ package com.example.study_flow_server.landmark.controller;
 import com.example.study_flow_server.global.exception.CustomException;
 import com.example.study_flow_server.global.exception.ErrorCode;
 import com.example.study_flow_server.global.response.ApiResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -17,22 +18,25 @@ import java.util.Map;
 @RequestMapping("/api/v1/ai")
 public class MapAiController {
 
-    private final String GROQ_API_KEY = "api";
-    private final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+    @Value("${groq.api.key}")
+    private String groqApiKey;
+
+    @Value("${groq.api.url}")
+    private String groqUrl;
 
     @PostMapping("/recommend")
     public ApiResponse<Map<String, String>> getAiRecommend(@RequestBody Map<String, Object> request) {
         String userPrompt = (String) request.get("userQuery");
         String places = (String) request.get("places");
 
-        String systemRole = "너는 친절한 학원강사야. 질문에 대하여 친절하게 대답해줘. "
-                + "주변 장소들: [" + places + "]";
+        String systemRole = "너는 친절한 학원강사야. 질문에 친절하게 한국말로 존댓말로 설명해줘."
+                + "주변 공부학원들: [" + places + "]";
 
         RestTemplate restTemplate = new RestTemplate();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(GROQ_API_KEY);
+        headers.setBearerAuth(groqApiKey);
 
         Map<String, Object> body = Map.of(
                 "model", "llama-3.3-70b-versatile",
@@ -45,7 +49,7 @@ public class MapAiController {
 
         try {
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-            ResponseEntity<Map> response = restTemplate.postForEntity(GROQ_URL, entity, Map.class);
+            ResponseEntity<Map> response = restTemplate.postForEntity(groqUrl, entity, Map.class);
 
             List choices = (List) response.getBody().get("choices");
             Map firstChoice = (Map) choices.get(0);

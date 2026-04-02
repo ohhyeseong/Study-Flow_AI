@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import apiClient from '../api';
 import Header from '../components/Header';
+import { useNavigate } from 'react-router-dom';
 
 const BoardPage = () => {
     const [posts, setPosts] = useState([]);
-    const [newPostTitle, setNewPostTitle] = useState('');
-    const [newPostContent, setNewPostContent] = useState('');
-    const [commentInputs, setCommentInputs] = useState({});
-    const [replyInputs, setReplyInputs] = useState({});
-    const [activeReplyId, setActiveReplyId] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetchPosts();
@@ -18,186 +15,97 @@ const BoardPage = () => {
     const fetchPosts = async () => {
         try {
             const response = await apiClient.get('/api/posts/list');
-            const data = response.data?.data || response.data || [];
-            setPosts(Array.isArray(data) ? data : []);
+            setPosts(response.data.data || []);
+            setLoading(false);
         } catch (error) {
-            console.error('목록 불러오기 실패:', error);
-            setPosts([]);
-        }
-    };
-
-    const handleCreatePost = async () => {
-        if (!newPostTitle || !newPostContent) return;
-        try {
-            await apiClient.post('/api/posts/create', {
-                title: newPostTitle,
-                content: newPostContent,
-            });
-            setNewPostTitle('');
-            setNewPostContent('');
-            fetchPosts();
-        } catch (error) {
-            console.error('게시글 작성 실패:', error);
-        }
-    };
-
-    const handleAddComment = async (postId) => {
-        const commentText = commentInputs[postId];
-        if (!commentText?.trim()) return;
-        try {
-            await apiClient.post(`/api/posts/${postId}/comments`, { content: commentText });
-            setCommentInputs(prev => ({ ...prev, [postId]: '' }));
-            fetchPosts();
-        } catch (error) {
-            console.error('댓글 작성 실패:', error);
-        }
-    };
-
-    const handleAddReply = async (postId, parentId) => {
-        const replyText = replyInputs[parentId];
-        if (!replyText?.trim()) return;
-        try {
-            await apiClient.post(`/api/posts/${postId}/comments`, {
-                content: replyText,
-                parentId: parentId
-            });
-            setReplyInputs(prev => ({ ...prev, [parentId]: '' }));
-            setActiveReplyId(null);
-            fetchPosts();
-        } catch (error) {
-            console.error('답글 작성 실패:', error);
+            console.error("게시글 로딩 실패:", error);
+            setLoading(false);
         }
     };
 
     return (
         <div style={styles.layout}>
             <Header />
-
-            <div style={styles.container}>
-                <div style={styles.stickyHeader}>
-                    <div style={styles.headerRow}>
-                        <h2 style={{margin: 0}}>📋 자유 게시판</h2>
-                        <Link to="/main" style={styles.backLink}>← 메인으로</Link>
+            <div style={styles.content}>
+                <div style={styles.headerArea}>
+                    <div>
+                        <h2 style={styles.title}>📋 커뮤니티 게시판</h2>
+                        <p style={styles.subtitle}>함께 공부하는 동료들과 지식을 공유해보세요.</p>
                     </div>
-                    <div style={styles.createForm}>
-                        <input type="text" placeholder="제목을 입력하세요" value={newPostTitle} onChange={(e) => setNewPostTitle(e.target.value)} style={styles.input} />
-                        <textarea placeholder="내용을 입력하세요" value={newPostContent} onChange={(e) => setNewPostContent(e.target.value)} style={styles.textarea} />
-                        <button onClick={handleCreatePost} style={styles.button}>게시글 작성</button>
-                    </div>
+                    <button
+                        onClick={() => navigate('/post/write')}
+                        style={styles.writeBtn}
+                    >
+                        ✍️ 글쓰기
+                    </button>
                 </div>
 
-                <div style={styles.scrollArea}>
-                    <div style={styles.postList}>
-                        {Array.isArray(posts) && posts.length > 0 ? (
-                            posts.map(post => (
-                                <div key={post.id} style={styles.postCard}>
-                                    <h3 style={styles.postTitle}>{post.title}</h3>
-                                    <p style={styles.postContent}>{post.content}</p>
-                                    <div style={styles.postMeta}>
-                                        작성자: {post.authorName} | {new Date(post.createdAt).toLocaleDateString()}
-                                    </div>
-
-                                    <div style={styles.commentSection}>
-                                        <h4>댓글 ({post.comments?.length || 0})</h4>
-
-                                        {Array.isArray(post.comments) && post.comments
-                                            .filter(comment => !comment.parent && !comment.parentId)
-                                            .map(comment => (
-                                                <div key={comment.id} style={styles.commentItem}>
-                                                    <div style={styles.commentMain}>
-                                                        <strong>{comment.authorName}:</strong> {comment.content}
-                                                        <button
-                                                            style={styles.replyButton}
-                                                            onClick={() => setActiveReplyId(activeReplyId === comment.id ? null : comment.id)}
-                                                        >
-                                                            {activeReplyId === comment.id ? '취소' : '답글'}
-                                                        </button>
-                                                    </div>
-
-                                                    {/* 답글 입력창 */}
-                                                    {activeReplyId === comment.id && (
-                                                        <div style={styles.replyInputWrapper}>
-                                                            <input
-                                                                style={styles.replyInput}
-                                                                placeholder="답글 입력 후 엔터..."
-                                                                value={replyInputs[comment.id] || ''}
-                                                                onChange={(e) => setReplyInputs({...replyInputs, [comment.id]: e.target.value})}
-                                                                onKeyDown={(e) => {
-                                                                    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-                                                                        e.preventDefault();
-                                                                        handleAddReply(post.id, comment.id);
-                                                                    }
-                                                                }}
-                                                                autoFocus
-                                                            />
-                                                        </div>
-                                                    )}
-
-                                                    {/* 대댓글(자식) 출력 영역: 필터 없이 children을 모두 보여줌 */}
-                                                    {Array.isArray(comment.children) && comment.children.map(child => (
-                                                        <div key={child.id} style={styles.replyItem}>
-                                                            <span style={styles.replyArrow}>└</span>
-                                                            <strong>{child.authorName}:</strong> {child.content}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ))
-                                        }
-
-                                        {/* 새 일반 댓글 입력창 */}
-                                        <input
-                                            type="text"
-                                            placeholder="댓글 입력 후 엔터..."
-                                            value={commentInputs[post.id] || ''}
-                                            onChange={(e) => setCommentInputs({...commentInputs, [post.id]: e.target.value})}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-                                                    e.preventDefault();
-                                                    handleAddComment(post.id);
-                                                }
-                                            }}
-                                            style={styles.commentInput}
-                                        />
-                                    </div>
+                {loading ? (
+                    <div style={styles.emptyState}>로딩 중... ⏳</div>
+                ) : posts.length === 0 ? (
+                    <div style={styles.emptyState}>
+                        <h3>등록된 게시글이 없습니다.</h3>
+                        <p>첫 번째 게시글의 주인공이 되어보세요!</p>
+                    </div>
+                ) : (
+                    <div style={styles.listContainer}>
+                        {posts.map((post) => (
+                            <div
+                                key={post.id}
+                                style={styles.card}
+                                onClick={() => navigate(`/post/${post.id}`)}
+                            >
+                                <h3 style={styles.postTitle}>{post.title}</h3>
+                                <div style={styles.postMeta}>
+                                    <span>👤 {post.authorName}</span>
+                                    <span>📅 {new Date(post.createdAt).toLocaleDateString()}</span>
+                                    <span>💬 {post.comments ? post.comments.length : 0}</span>
                                 </div>
-                            ))
-                        ) : (
-                            <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
-                                게시글이 없습니다. 첫 번째 게시글을 작성해 보세요!
                             </div>
-                        )}
+                        ))}
                     </div>
-                </div>
+                )}
             </div>
         </div>
     );
 };
 
 const styles = {
-    layout: { backgroundColor: '#f5f5f5', minHeight: '100vh' },
-    container: { height: '100vh', display: 'flex', flexDirection: 'column', maxWidth: '800px', margin: '0 auto', backgroundColor: '#fff' },
-    stickyHeader: { padding: '20px', backgroundColor: '#fff', borderBottom: '2px solid #eee', zIndex: 10 },
-    headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' },
-    createForm: { padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '8px' },
-    scrollArea: { flex: 1, overflowY: 'auto', padding: '20px' },
-    backLink: { textDecoration: 'none', color: '#4285F4', fontWeight: 'bold' },
-    input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' },
-    textarea: { width: '100%', padding: '10px', height: '60px', marginBottom: '10px', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' },
-    button: { width: '100%', padding: '10px', backgroundColor: '#4285F4', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
-    postList: { display: 'flex', flexDirection: 'column', gap: '20px' },
-    postCard: { padding: '20px', border: '1px solid #eee', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' },
-    postTitle: { margin: '0 0 10px 0' },
-    postContent: { whiteSpace: 'pre-wrap', color: '#555' },
-    postMeta: { fontSize: '12px', color: '#999', marginTop: '10px' },
-    commentSection: { marginTop: '15px', borderTop: '1px solid #eee', paddingTop: '10px' },
-    commentItem: { padding: '8px 0', borderBottom: '1px solid #f9f9f9' },
-    commentMain: { display: 'flex', justifyContent: 'space-between', fontSize: '14px' },
-    replyButton: { border: 'none', background: 'none', color: '#4285F4', cursor: 'pointer', fontSize: '12px' },
-    replyInputWrapper: { marginLeft: '20px', marginTop: '5px' },
-    replyInput: { width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd', outline: 'none' },
-    replyItem: { marginLeft: '20px', fontSize: '13px', color: '#666', marginTop: '5px' },
-    replyArrow: { marginRight: '5px', color: '#4285F4' },
-    commentInput: { width: '100%', padding: '8px', marginTop: '10px', boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: '4px' }
+    layout: { width: '100vw', minHeight: '100vh', backgroundColor: '#f8fafc' },
+    content: { maxWidth: '1000px', margin: '0 auto', padding: '40px 20px' },
+    headerArea: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'flex-end',
+        marginBottom: '30px',
+        borderBottom: '2px solid #e2e8f0',
+        paddingBottom: '20px'
+    },
+    title: { fontSize: '28px', fontWeight: '800', color: '#1e293b', margin: 0 },
+    subtitle: { color: '#64748b', marginTop: '8px', fontSize: '15px' },
+    writeBtn: {
+        padding: '12px 24px',
+        backgroundColor: '#4285F4',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '10px',
+        fontWeight: 'bold',
+        cursor: 'pointer',
+        transition: '0.2s'
+    },
+    listContainer: { display: 'flex', flexDirection: 'column', gap: '16px' },
+    card: {
+        backgroundColor: '#fff',
+        padding: '24px',
+        borderRadius: '16px',
+        border: '1px solid #e2e8f0',
+        cursor: 'pointer',
+        transition: 'transform 0.2s, box-shadow 0.2s',
+        ":hover": { transform: 'translateY(-2px)', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)' }
+    },
+    postTitle: { fontSize: '18px', fontWeight: '700', color: '#334155', marginBottom: '12px' },
+    postMeta: { display: 'flex', gap: '20px', fontSize: '13px', color: '#94a3b8' },
+    emptyState: { textAlign: 'center', padding: '100px 0', color: '#64748b' }
 };
 
 export default BoardPage;

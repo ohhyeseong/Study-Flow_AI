@@ -13,8 +13,6 @@ from .config import settings
 
 class AIService:
     def __init__(self):
-        #서비스가 처음 생성될 때, 설정값을 사용하여 AI 클라이언트, 임베딩 모델, 벡터 DB를 초기화한다.
-        # 2. 설정 파일(settings)을 통해 클라이언트들을 초기화한다.
         if not settings.ANTHROPIC_API_KEY:
             raise ValueError("ANTHROPIC_API_KEY가 설정되지 않았습니다. .env 파일을 확인하세요.")
 
@@ -34,10 +32,6 @@ class AIService:
         )
 
     async def analyze_content(self, prompt: str, file: Optional[UploadFile] = None) -> dict:
-        """
-        사용자의 프롬프트와 (선택적)이미지 파일을 분석하고, AI로부터 답변을 받아 벡터 DB에 저장한다.
-        기존 /analyze-image 엔드포인트 로직과 동일.
-        """
         try:
             source_filename = "text_only"
             messages = []
@@ -89,14 +83,8 @@ class AIService:
             raise HTTPException(status_code=500, detail=str(e))
 
     def search_memory(self, query: str) -> dict:
-        """
-        벡터 DB에서 쿼리와 유사한 내용을 검색한다.
-        기존 /search-memory 엔드포인트 로직과 동일.
-        """
         results = self.vector_store.similarity_search(query, k=3)
         return {"results": [doc.page_content for doc in results]}
 
-# 3. 서비스 클래스의 인스턴스를 생성한다.
-#    API 엔드포인트에서는 이 ai_service 객체를 import해서 사용하게 된다.
 ai_service = AIService()
     
