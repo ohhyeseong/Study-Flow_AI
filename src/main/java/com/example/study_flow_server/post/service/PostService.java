@@ -9,6 +9,7 @@ import com.example.study_flow_server.post.domain.PostLike;
 import com.example.study_flow_server.post.repository.PostRepository;
 import com.example.study_flow_server.post.repository.PostLikeRepository;
 import com.example.study_flow_server.user.domain.User;
+import com.example.study_flow_server.user.domain.UserRole;
 import com.example.study_flow_server.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -49,12 +50,16 @@ public class PostService {
         return postId;
     }
 
-    public PostResponseDto deletePost(Long postId) {
+    public PostResponseDto deletePost(Long postId, User user) {
         Post postToDelete = findPostById(postId);
+
+        if (!postToDelete.getUser().getUsername().equals(user.getUsername()) && user.getRole() != UserRole.ADMIN) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
 
         PostResponseDto response = PostResponseDto.from(postToDelete);
         postRepository.delete(postToDelete);
-        
+
         return response;
     }
 
@@ -71,9 +76,21 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public List<PostResponseDto> getAllPosts() {
+    public List<PostResponseDto> getAllPosts(String username) {
+        User user = null;
+        if (username != null) {
+            user = userRepository.findByUsername(username).orElse(null);
+        }
+
+        final User finalUser = user;
         return postRepository.findAll().stream()
-                .map(PostResponseDto::from)
+                .map(post -> {
+                    boolean isLiked = false;
+                    if (finalUser != null) {
+                        isLiked = postLikeRepository.existsByUserAndPost(finalUser, post);
+                    }
+                    return PostResponseDto.from(post, isLiked);
+                })
                 .collect(Collectors.toList());
     }
 

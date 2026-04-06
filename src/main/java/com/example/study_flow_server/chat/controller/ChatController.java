@@ -9,7 +9,6 @@ import com.example.study_flow_server.global.response.ApiResponse;
 import com.example.study_flow_server.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -18,8 +17,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Map;
 
-@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/chat/rooms")
@@ -64,11 +63,11 @@ public class ChatController {
     }
 
     @GetMapping("/{roomId}/code")
-    public ApiResponse<java.util.Map<String, String>> getRoomCode(
+    public ApiResponse<Map<String, String>> getRoomCode(
             @PathVariable Long roomId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         String code = chatService.getRoomCode(roomId, userDetails.getUser().getId());
-        return ApiResponse.ok(java.util.Map.of("code", code));
+        return ApiResponse.ok(Map.of("code", code));
     }
 
     @MessageMapping("/chat/message")
@@ -96,7 +95,7 @@ public class ChatController {
     @PostMapping("/{roomId}/invite")
     public ApiResponse<Void> inviteUser(
             @PathVariable Long roomId,
-            @RequestBody java.util.Map<String, String> request) {
+            @RequestBody Map<String, String> request) {
         String targetEmail = request.get("email");
         if (targetEmail != null && !targetEmail.trim().isEmpty()) {
             chatService.sendRoomInvite(roomId, targetEmail);
@@ -108,4 +107,4 @@ public class ChatController {
         List<ChatRoomDto> rooms = chatService.getAllRooms();
         messagingTemplate.convertAndSend("/sub/chat/rooms", rooms);
     }
-}
+}

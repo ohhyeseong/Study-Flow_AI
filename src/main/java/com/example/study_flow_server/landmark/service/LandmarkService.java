@@ -51,7 +51,7 @@ public class LandmarkService {
 
     public LandmarkResponseDto getLandmarkDetail(Long landmarkId) {
         Landmark landmark = landmarkRepository.findById(landmarkId)
-                .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.LANDMARK_NOT_FOUND));
 
         return mapEntityToDto(landmark);
     }

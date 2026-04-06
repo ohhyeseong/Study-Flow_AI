@@ -1,6 +1,5 @@
 package com.example.study_flow_server.post.controller;
 
-import com.example.study_flow_server.global.exception.CustomException;
 import com.example.study_flow_server.global.response.ApiResponse;
 import com.example.study_flow_server.global.security.CustomUserDetails;
 import com.example.study_flow_server.post.dto.PostCreateDto;
@@ -40,8 +39,11 @@ public class PostController {
     }
 
     @DeleteMapping("/{postId:\\d+}")
-    public ApiResponse<String> deletePost(@PathVariable Long postId) {
-        postService.deletePost(postId);
+    public ApiResponse<String> deletePost(
+            @PathVariable Long postId,
+            @AuthenticationPrincipal CustomUserDetails customUserDetails
+    ) {
+        postService.deletePost(postId, customUserDetails.getUser());
         return ApiResponse.ok("삭제성공");
     }
 
@@ -55,8 +57,9 @@ public class PostController {
     }
 
     @GetMapping("/list")
-    public ApiResponse<List<PostResponseDto>> getAllPost() {
-        List<PostResponseDto> responseDto = postService.getAllPosts();
+    public ApiResponse<List<PostResponseDto>> getAllPost(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        String username = userDetails != null ? userDetails.getUsername() : null;
+        List<PostResponseDto> responseDto = postService.getAllPosts(username);
         return ApiResponse.ok(responseDto);
     }
 

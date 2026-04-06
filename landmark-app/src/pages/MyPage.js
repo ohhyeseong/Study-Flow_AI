@@ -14,6 +14,7 @@ const MyPage = () => {
     const [isEditingNick, setIsEditingNick] = useState(false);
     const [editNickname, setEditNickname] = useState('');
     const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+    const [uploading, setUploading] = useState(false);
 
     // List of predefined avatars (using dicebear as placeholder)
     const predefinedAvatars = [
@@ -95,6 +96,37 @@ const MyPage = () => {
         } catch (error) {
             console.error(error);
             alert('프로필 이미지 변경에 실패했습니다.');
+        }
+    };
+
+    const handleFileUpload = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Check file type
+        if (!file.type.startsWith('image/')) {
+            alert('이미지 파일만 업로드 가능합니다.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        setUploading(true);
+        try {
+            const response = await apiClient.post('/api/users/me/profile-image', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            setUser(response.data.data);
+            setIsAvatarModalOpen(false);
+            alert('프로필 이미지가 성공적으로 업로드되었습니다!');
+        } catch (error) {
+            console.error('File upload failed', error);
+            alert('이미지 업로드에 실패했습니다.');
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -233,6 +265,26 @@ const MyPage = () => {
                                 />
                             ))}
                         </div>
+
+                        <div style={styles.uploadSection}>
+                            <div style={styles.divider}>
+                                <div style={styles.line}></div>
+                                <span style={styles.dividerText}>또는 직접 업로드</span>
+                                <div style={styles.line}></div>
+                            </div>
+                            
+                            <label style={uploading ? styles.uploadBtnDisabled : styles.uploadBtn}>
+                                {uploading ? '업로드 중...' : '📁 내 PC에서 사진 선택'}
+                                <input 
+                                    type="file" 
+                                    accept="image/*" 
+                                    onChange={handleFileUpload} 
+                                    style={{ display: 'none' }}
+                                    disabled={uploading}
+                                />
+                            </label>
+                        </div>
+
                         <button onClick={() => setIsAvatarModalOpen(false)} style={styles.closeModalBtn}>닫기</button>
                     </div>
                     <style>{`
@@ -293,6 +345,12 @@ const styles = {
     modalContent: { backgroundColor: '#fff', padding: '30px', borderRadius: '24px', width: '400px', maxWidth: '90%', textAlign: 'center' },
     avatarGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', marginBottom: '20px' },
     avatarOption: { width: '100%', aspectRatio: '1', backgroundColor: '#f8fafc', borderRadius: '50%', cursor: 'pointer', border: '2px solid transparent', transition: '0.2s' },
+    uploadSection: { marginTop: '20px', marginBottom: '25px' },
+    divider: { display: 'flex', alignItems: 'center', marginBottom: '15px' },
+    line: { flex: 1, height: '1px', backgroundColor: '#e2e8f0' },
+    dividerText: { padding: '0 10px', fontSize: '13px', color: '#94a3b8' },
+    uploadBtn: { display: 'inline-block', width: '100%', padding: '12px', backgroundColor: '#4f46e5', color: '#fff', borderRadius: '12px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', boxSizing: 'border-box' },
+    uploadBtnDisabled: { display: 'inline-block', width: '100%', padding: '12px', backgroundColor: '#cbd5e1', color: '#fff', borderRadius: '12px', fontSize: '14px', fontWeight: 'bold', cursor: 'not-allowed', boxSizing: 'border-box' },
     closeModalBtn: { padding: '10px 24px', backgroundColor: '#f1f5f9', border: 'none', borderRadius: '12px', color: '#475569', fontWeight: 'bold', cursor: 'pointer' }
 };
 

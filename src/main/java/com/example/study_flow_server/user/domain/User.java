@@ -9,23 +9,23 @@ import lombok.NoArgsConstructor;
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-@Table(name ="users")
+@Table(name = "users")
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id ;
+    private Long id;
 
-    @Column(nullable = false , length = 20 , unique = true)
+    @Column(nullable = false, length = 20, unique = true)
     private String username;
 
-    @Column(nullable = false , length = 20 , unique = true)
+    @Column(nullable = false, length = 20, unique = true)
     private String nickname;
 
-    @Column(nullable = false , length = 30 , unique = true)
+    @Column(nullable = false, length = 30, unique = true)
     private String email;
 
-    @Column(nullable = false , unique = true)
+    @Column(nullable = false, unique = true)
     private String password;
 
     @Enumerated(EnumType.STRING)
@@ -39,7 +39,8 @@ public class User {
     private boolean isBanned = false;
 
     @Builder
-    public User(Long id,String username , String nickname , String email , String password , UserRole role, String profileImageUrl, boolean isBanned){
+    public User(Long id, String username, String nickname, String email, String password, UserRole role,
+            String profileImageUrl, boolean isBanned) {
         this.id = id;
         this.username = username;
         this.nickname = nickname;
@@ -54,11 +55,12 @@ public class User {
         this.isBanned = isBanned;
     }
 
-    public void updateNickname(String newNickname){
+    public void updateNickname(String newNickname) {
         this.nickname = newNickname;
     }
 
-    public void updateProfileImage(String profileImageUrl){
+    public void updateProfileImage(String profileImageUrl) {
         this.profileImageUrl = profileImageUrl;
     }
+
 }

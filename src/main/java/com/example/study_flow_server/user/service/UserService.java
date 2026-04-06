@@ -112,6 +112,13 @@ public class UserService {
         redisService.deleteValues(REDIS_AUTH_PREFIX + email);
     }
 
+    @Transactional
+    public User updateMyProfileImage(String username, String imageUrl) {
+        User user = getUserByUsername(username);
+        user.updateProfileImage(imageUrl);
+        return user;
+    }
+
     private User getUserByUsername(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
