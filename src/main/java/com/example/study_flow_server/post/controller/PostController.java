@@ -5,8 +5,10 @@ import com.example.study_flow_server.global.security.CustomUserDetails;
 import com.example.study_flow_server.post.dto.PostCreateDto;
 import com.example.study_flow_server.post.dto.PostResponseDto;
 import com.example.study_flow_server.post.service.PostService;
+import com.example.study_flow_server.user.service.S3Service;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,22 +20,27 @@ import java.util.List;
 public class PostController {
 
     private final PostService postService;
+    private final S3Service s3Service;
 
     @PostMapping("/create")
     public ApiResponse<String> createPost(
             @Valid @RequestBody PostCreateDto postCreateDto,
-            @AuthenticationPrincipal CustomUserDetails customUserDetails
-    ) {
+            @AuthenticationPrincipal CustomUserDetails customUserDetails) {
         postService.createPost(postCreateDto, customUserDetails.getUsername());
         return ApiResponse.ok("게시글이 성공적으로 등록되었습니다.");
+    }
+
+    @PostMapping("/upload-image")
+    public ApiResponse<String> uploadImage(@RequestPart("file") MultipartFile file) {
+        String imageUrl = s3Service.uploadFile(file);
+        return ApiResponse.ok(imageUrl);
     }
 
     @PutMapping("/{postId:\\d+}")
     public ApiResponse<String> updatePost(
             @PathVariable Long postId,
             @Valid @RequestBody PostCreateDto postCreateDto,
-            @AuthenticationPrincipal CustomUserDetails customUserDetails
-    ) {
+            @AuthenticationPrincipal CustomUserDetails customUserDetails) {
         postService.updatePost(postId, postCreateDto, customUserDetails.getUsername());
         return ApiResponse.ok("게시글이 성공적으로 수정되었습니다.");
     }
@@ -41,8 +48,7 @@ public class PostController {
     @DeleteMapping("/{postId:\\d+}")
     public ApiResponse<String> deletePost(
             @PathVariable Long postId,
-            @AuthenticationPrincipal CustomUserDetails customUserDetails
-    ) {
+            @AuthenticationPrincipal CustomUserDetails customUserDetails) {
         postService.deletePost(postId, customUserDetails.getUser());
         return ApiResponse.ok("삭제성공");
     }
@@ -78,7 +84,8 @@ public class PostController {
     }
 
     @GetMapping("/liked")
-    public ApiResponse<List<PostResponseDto>> getLikedPosts(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    public ApiResponse<List<PostResponseDto>> getLikedPosts(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails) {
         List<PostResponseDto> responseDto = postService.getLikedPosts(customUserDetails.getUsername());
         return ApiResponse.ok(responseDto);
     }

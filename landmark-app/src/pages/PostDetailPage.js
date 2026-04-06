@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../api';
 import Header from '../components/Header';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const PostDetailPage = () => {
     const { postId } = useParams();
@@ -142,7 +144,11 @@ const PostDetailPage = () => {
                                 <span>📅 {new Date(post.createdAt).toLocaleString()}</span>
                             </div>
                             <hr style={styles.hr} />
-                            <div style={styles.postBody}>{post.content}</div>
+                            <div style={styles.postBody}>
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    {post.content.replace(/\n/g, '  \n')}
+                                </ReactMarkdown>
+                            </div>
 
                             <div style={styles.reactionArea}>
                                 <button
@@ -246,7 +252,14 @@ const styles = {
     actionGroup: { display: 'flex', gap: '10px' },
     textBtn: { background: 'none', border: 'none', color: '#4285F4', cursor: 'pointer', fontWeight: 'bold' },
     hr: { border: 'none', borderTop: '1px solid #f1f5f9', margin: '24px 0' },
-    postBody: { fontSize: '17px', lineHeight: '1.8', color: '#334155', whiteSpace: 'pre-wrap' },
+    postBody: { 
+        fontSize: '17px', 
+        lineHeight: '1.8', 
+        color: '#334155',
+        '& img': { maxWidth: '100%', borderRadius: '12px', marginTop: '16px', marginBottom: '16px' },
+        '& p': { marginBottom: '16px' },
+        '& h1, & h2, & h3': { marginTop: '24px', marginBottom: '12px' }
+    },
     editForm: { display: 'flex', flexDirection: 'column', gap: '15px' },
     editInput: { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none' },
     editTextarea: { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none', resize: 'vertical' },

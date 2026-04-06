@@ -19,11 +19,17 @@ public class Post extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false , length = 30)
+    @Column(nullable = false, length = 255)
     public String title;
 
-    @Column(nullable = false , length = 200)
-    public String content;
+    @Lob
+    @Column(nullable = false, columnDefinition = "LONGTEXT")
+    private String content;
+
+    @ElementCollection
+    @CollectionTable(name = "post_images", joinColumns = @JoinColumn(name = "post_id"))
+    @Column(name = "image_url")
+    private List<String> imageUrls = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
@@ -36,14 +42,18 @@ public class Post extends BaseEntity {
     private List<PostLike> likes = new ArrayList<>();
 
     @Builder
-    public Post(String title, String content, User user){
+    public Post(String title, String content, User user, List<String> imageUrls){
         this.title = title;
         this.content = content;
         this.user = user;
+        this.imageUrls = imageUrls != null ? imageUrls : new ArrayList<>();
     }
 
-    public void update(String title, String content) {
+    public void update(String title, String content, List<String> imageUrls) {
         this.title = title;
         this.content = content;
+        if (imageUrls != null) {
+            this.imageUrls = imageUrls;
+        }
     }
 }

@@ -15,7 +15,8 @@ public record PostResponseDto(
         LocalDateTime createdAt,
         List<CommentResponseDto> comments,
         int likeCount,
-        boolean isLiked) {
+        boolean isLiked,
+        List<String> imageUrls) {
     public static PostResponseDto from(Post post) {
         return from(post, false);
     }
@@ -33,6 +34,7 @@ public record PostResponseDto(
                         .map(CommentResponseDto::from)
                         .collect(Collectors.toList()) : List.of(),
                 post.getLikes() != null ? post.getLikes().size() : 0,
-                isLiked);
+                isLiked,
+                post.getImageUrls());
     }
 }

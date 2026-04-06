@@ -56,7 +56,15 @@ const BoardPage = () => {
                                 onClick={() => navigate(`/post/${post.id}`)}
                             >
                                 <div style={styles.thumbnail}>
-                                    <div style={styles.thumbnailPlaceholder}>📝</div>
+                                    {post.imageUrls && post.imageUrls.length > 0 ? (
+                                        <img 
+                                            src={post.imageUrls[0]} 
+                                            alt="Thumbnail" 
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                        />
+                                    ) : (
+                                        <div style={styles.thumbnailPlaceholder}>📝</div>
+                                    )}
                                 </div>
                                 <div style={styles.cardContent}>
                                     <h3 style={styles.postTitle}>{post.title}</h3>

@@ -35,6 +35,7 @@ public class PostService {
                 .title(dto.title())
                 .content(dto.content())
                 .user(author)
+                .imageUrls(dto.imageUrls())
                 .build();
 
         return postRepository.save(newPost).getId();
@@ -45,7 +46,7 @@ public class PostService {
 
         validateAuthor(existingPost, username);
 
-        existingPost.update(dto.title(), dto.content());
+        existingPost.update(dto.title(), dto.content(), dto.imageUrls());
 
         return postId;
     }
@@ -113,13 +114,13 @@ public class PostService {
                 .map(like -> {
                     postLikeRepository.delete(like);
                     post.getLikes().remove(like);
-                    return false; // unliked
+                    return false;
                 })
                 .orElseGet(() -> {
                     PostLike newLike = PostLike.builder().user(user).post(post).build();
                     postLikeRepository.save(newLike);
                     post.getLikes().add(newLike);
-                    return true; // liked
+                    return true;
                 });
     }
 
