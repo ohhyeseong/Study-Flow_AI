@@ -48,18 +48,31 @@ const BoardPage = () => {
                         <p>첫 번째 게시글의 주인공이 되어보세요!</p>
                     </div>
                 ) : (
-                    <div style={styles.listContainer}>
+                    <div style={styles.gridContainer}>
                         {posts.map((post) => (
                             <div
                                 key={post.id}
-                                style={styles.card}
+                                style={styles.blogCard}
                                 onClick={() => navigate(`/post/${post.id}`)}
                             >
-                                <h3 style={styles.postTitle}>{post.title}</h3>
-                                <div style={styles.postMeta}>
-                                    <span>👤 {post.authorName}</span>
-                                    <span>📅 {new Date(post.createdAt).toLocaleDateString()}</span>
-                                    <span>💬 {post.comments ? post.comments.length : 0}</span>
+                                <div style={styles.thumbnail}>
+                                    <div style={styles.thumbnailPlaceholder}>📝</div>
+                                </div>
+                                <div style={styles.cardContent}>
+                                    <h3 style={styles.postTitle}>{post.title}</h3>
+                                    <p style={styles.postExcerpt}>
+                                        {post.content ? post.content.substring(0, 80) + '...' : '내용이 없습니다.'}
+                                    </p>
+                                    <div style={styles.postMeta}>
+                                        <div style={styles.authorInfo}>
+                                            <div style={styles.authorAvatar}>{post.authorName ? post.authorName.charAt(0) : '👤'}</div>
+                                            <span>{post.authorName}</span>
+                                        </div>
+                                        <div style={styles.statsInfo}>
+                                            <span style={styles.statItem}>❤️ {post.likeCount || 0}</span>
+                                            <span style={styles.statItem}>💬 {post.comments ? post.comments.length : 0}</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -91,20 +104,51 @@ const styles = {
         borderRadius: '10px',
         fontWeight: 'bold',
         cursor: 'pointer',
-        transition: '0.2s'
+        transition: '0.2s',
+        boxShadow: '0 4px 6px rgba(66, 133, 244, 0.2)'
     },
-    listContainer: { display: 'flex', flexDirection: 'column', gap: '16px' },
-    card: {
+    gridContainer: { 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', 
+        gap: '24px' 
+    },
+    blogCard: {
         backgroundColor: '#fff',
-        padding: '24px',
         borderRadius: '16px',
-        border: '1px solid #e2e8f0',
+        border: '1px solid #f1f5f9',
         cursor: 'pointer',
-        transition: 'transform 0.2s, box-shadow 0.2s',
-        ":hover": { transform: 'translateY(-2px)', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)' }
+        overflow: 'hidden',
+        transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+        ":hover": { transform: 'translateY(-5px)', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }
     },
-    postTitle: { fontSize: '18px', fontWeight: '700', color: '#334155', marginBottom: '12px' },
-    postMeta: { display: 'flex', gap: '20px', fontSize: '13px', color: '#94a3b8' },
+    thumbnail: {
+        width: '100%',
+        height: '160px',
+        backgroundColor: '#e2e8f0',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    thumbnailPlaceholder: {
+        fontSize: '48px',
+        opacity: 0.5
+    },
+    cardContent: {
+        padding: '20px',
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1
+    },
+    postTitle: { fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: '0 0 10px 0', lineHeight: '1.4' },
+    postExcerpt: { fontSize: '14px', color: '#64748b', margin: '0 0 20px 0', lineHeight: '1.6', flex: 1 },
+    postMeta: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', borderTop: '1px solid #f1f5f9' },
+    authorInfo: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600', color: '#475569' },
+    authorAvatar: { width: '24px', height: '24px', borderRadius: '12px', backgroundColor: '#cbd5e1', color: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '12px' },
+    statsInfo: { display: 'flex', gap: '12px' },
+    statItem: { fontSize: '13px', color: '#64748b', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' },
     emptyState: { textAlign: 'center', padding: '100px 0', color: '#64748b' }
 };
 

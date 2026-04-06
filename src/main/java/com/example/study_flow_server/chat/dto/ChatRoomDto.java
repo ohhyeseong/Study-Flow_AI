@@ -6,14 +6,16 @@ public record ChatRoomDto(
         Long id,
         String title,
         String creatorName,
-        Long userCount
+        Long userCount,
+        boolean isPrivate
 ) {
     public static ChatRoomDto from(ChatRoom chatRoom, Long userCount) {
         return new ChatRoomDto(
                 chatRoom.getId(),
                 chatRoom.getTitle(),
-                chatRoom.getCreator().getUsername(),
-                userCount
+                chatRoom.getCreator().getNickname(),
+                userCount,
+                chatRoom.isPrivate()
         );
     }
 }

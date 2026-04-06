@@ -9,6 +9,7 @@ import com.example.study_flow_server.user.domain.User;
 import com.example.study_flow_server.user.domain.UserRole;
 import com.example.study_flow_server.user.dto.LoginRequestDto;
 import com.example.study_flow_server.user.dto.UserCreateDto;
+import com.example.study_flow_server.user.dto.UserUpdateDto;
 import com.example.study_flow_server.user.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
@@ -67,14 +68,19 @@ public class UserService {
 
         Claims claims = jwtUtil.getUserInfoFromToken(accessToken);
         String username = claims.getSubject();
-        
+
         deleteStoredRefreshToken(username);
         addTokenToBlacklist(accessToken, claims);
     }
 
-    public User updateNickname(UserCreateDto userCreateDto) {
-        User user = getUserByUsername(userCreateDto.username());
-        user.updateNickname(userCreateDto.nickname());
+    public User updateMyInfo(String username, UserUpdateDto userUpdateDto) {
+        User user = getUserByUsername(username);
+        if (userUpdateDto.nickname() != null && !userUpdateDto.nickname().isBlank()) {
+            user.updateNickname(userUpdateDto.nickname());
+        }
+        if (userUpdateDto.profileImageUrl() != null) {
+            user.updateProfileImage(userUpdateDto.profileImageUrl());
+        }
         return user;
     }
 
@@ -118,7 +124,8 @@ public class UserService {
     }
 
     private TokenResponseDto generateAndStoreTokens(String username) {
-        String accessToken = jwtUtil.createToken(username, UserRole.USER.name());
+        User user = getUserByUsername(username);
+        String accessToken = jwtUtil.createToken(username, user.getRole().name());
         String refreshToken = jwtUtil.createRefreshToken(username);
 
         redisService.setValues(username, refreshToken, jwtUtil.getRefreshTokenTimeToLive());
@@ -127,6 +134,7 @@ public class UserService {
                 .grantType(JwtUtil.BEARER_PREFIX)
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
+                .role(user.getRole().name())
                 .accessTokenExpiresIn(ACCESS_TOKEN_EXPIRATION_MS)
                 .build();
     }
@@ -150,12 +158,14 @@ public class UserService {
     }
 
     private TokenResponseDto createReissuedTokenResponse(String username, String refreshToken) {
-        String newAccessToken = jwtUtil.createToken(username, UserRole.USER.name());
+        User user = getUserByUsername(username);
+        String newAccessToken = jwtUtil.createToken(username, user.getRole().name());
 
         return TokenResponseDto.builder()
                 .grantType(JwtUtil.BEARER_PREFIX)
                 .accessToken(newAccessToken)
                 .refreshToken(refreshToken)
+                .role(user.getRole().name())
                 .accessTokenExpiresIn(ACCESS_TOKEN_EXPIRATION_MS)
                 .build();
     }
@@ -169,7 +179,8 @@ public class UserService {
     private void addTokenToBlacklist(String accessToken, Claims claims) {
         long expirationRemainingTime = claims.getExpiration().getTime() - System.currentTimeMillis();
         if (expirationRemainingTime > 0) {
-            redisService.setBlackList(REDIS_BLACKLIST_PREFIX + accessToken, "logout", Duration.ofMillis(expirationRemainingTime));
+            redisService.setBlackList(REDIS_BLACKLIST_PREFIX + accessToken, "logout",
+                    Duration.ofMillis(expirationRemainingTime));
         }
     }
 }

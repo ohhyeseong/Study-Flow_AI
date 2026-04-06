@@ -10,6 +10,8 @@ import MapPage from './pages/MapPage';
 import ChatPage from './pages/ChatPage';
 import PostWritePage from './pages/PostWritePage';
 import PostDetailPage from './pages/PostDetailPage';
+import MyPage from './pages/MyPage';
+import AdminPage from './pages/AdminPage';
 import './App.css';
 
 function App() {
@@ -29,6 +31,8 @@ function App() {
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/post/write" element={<PostWritePage />} />
         <Route path="/post/:postId" element={<PostDetailPage />} />
+        <Route path="/mypage" element={<MyPage />} />
+        <Route path="/admin" element={<AdminPage />} />
       </Routes>
     </Router>
   );

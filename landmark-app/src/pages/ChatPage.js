@@ -10,6 +10,8 @@ const ChatPage = () => {
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [newRoomTitle, setNewRoomTitle] = useState('');
+    const [isPrivateRoom, setIsPrivateRoom] = useState(false);
+    const [currentRoomCode, setCurrentRoomCode] = useState('');
 
     const stompClient = useRef(null);
     const subscription = useRef(null);
@@ -37,28 +39,75 @@ const ChatPage = () => {
     const handleCreateRoom = async () => {
         if (!newRoomTitle.trim()) return;
         try {
-            await apiClient.post('/api/chat/rooms', { title: newRoomTitle });
+            await apiClient.post('/api/chat/rooms', { title: newRoomTitle, isPrivate: isPrivateRoom });
             setNewRoomTitle('');
+            setIsPrivateRoom(false);
             fetchRooms(); // 방 생성 후 목록 새로고침
         } catch (error) {
             console.error(error);
+            alert("방 생성에 실패했습니다.");
         }
     };
 
     const handleEnterRoom = async (room) => {
         try {
-            if (currentRoom?.id === room.id) return; // 이미 들어온 방이면 무시
+            if (currentRoom?.id === room.id) return;
 
-            await apiClient.post(`/api/chat/rooms/${room.id}/enter`);
+            let isEntered = false;
+            try {
+                await apiClient.post(`/api/chat/rooms/${room.id}/enter`);
+                isEntered = true;
+            } catch (error) {
+                if (room.isPrivate) {
+                    const code = prompt("🔒 비공개 방입니다. 6자리 입장 코드를 입력하세요.");
+                    if (code === null) return;
+                    try {
+                        await apiClient.post(`/api/chat/rooms/${room.id}/enter?roomCode=${encodeURIComponent(code)}`);
+                        isEntered = true;
+                    } catch (e) {
+                        alert("입장 코드가 일치하지 않습니다.");
+                        return;
+                    }
+                } else {
+                    alert("입장에 실패했습니다.");
+                    return;
+                }
+            }
+
+            if (!isEntered) return;
+
             const response = await apiClient.get(`/api/chat/rooms/${room.id}/messages`);
             setMessages(response.data.data || []);
             setCurrentRoom(room);
+
+            if (room.isPrivate) {
+                try {
+                    const codeRes = await apiClient.get(`/api/chat/rooms/${room.id}/code`);
+                    setCurrentRoomCode(codeRes.data.data.code);
+                } catch (e) { console.error(e); }
+            } else {
+                setCurrentRoomCode('');
+            }
 
             if (stompClient.current?.connected) {
                 subscribeRoom(room.id);
             }
         } catch (error) {
             console.error(error);
+            alert("입장에 실패했습니다. 코드를 다시 확인해주세요.");
+        }
+    };
+
+    const handleInvite = async () => {
+        const targetEmail = prompt("초대할 분의 이메일 주소를 입력하세요.");
+        if (!targetEmail || !targetEmail.trim()) return;
+
+        try {
+            await apiClient.post(`/api/chat/rooms/${currentRoom.id}/invite`, { email: targetEmail });
+            alert("✅ 초대장이 성공적으로 발송되었습니다!");
+        } catch (error) {
+            console.error(error);
+            alert("초대장 발송에 실패했습니다.");
         }
     };
 
@@ -84,7 +133,7 @@ const ChatPage = () => {
         const token = localStorage.getItem('accessToken');
         const socket = new SockJS('http://localhost:8090/ws');
         stompClient.current = Stomp.over(socket);
-        stompClient.current.debug = () => {};
+        stompClient.current.debug = () => { };
 
         stompClient.current.connect({ 'Authorization': `Bearer ${token}` }, () => {
             stompClient.current.subscribe('/sub/chat/rooms', (message) => {
@@ -135,6 +184,10 @@ const ChatPage = () => {
                         <h2 style={styles.title}>💬 스터디 채팅</h2>
                         <div style={styles.createArea}>
                             <input type="text" placeholder="새 방 제목" value={newRoomTitle} onChange={(e) => setNewRoomTitle(e.target.value)} style={styles.createInput} onKeyDown={(e) => e.key === 'Enter' && handleCreateRoom()} />
+                            <label style={styles.privateLabel}>
+                                <input type="checkbox" checked={isPrivateRoom} onChange={(e) => setIsPrivateRoom(e.target.checked)} />
+                                🔒 비공개
+                            </label>
                             <button onClick={handleCreateRoom} style={styles.createBtn}>+</button>
                         </div>
                     </div>
@@ -142,7 +195,10 @@ const ChatPage = () => {
                         {rooms.map(room => (
                             <div key={room.id} style={currentRoom?.id === room.id ? styles.roomCardActive : styles.roomCard} onClick={() => handleEnterRoom(room)}>
                                 <div style={styles.roomInfo}>
-                                    <div style={styles.roomTitle}>{room.title}</div>
+                                    <div style={styles.roomTitle}>
+                                        {room.isPrivate && <span style={{ marginRight: '6px' }}>🔒</span>}
+                                        {room.title}
+                                    </div>
                                     <div style={styles.roomMeta}>참여 {room.userCount || 0}명</div>
                                 </div>
                             </div>
@@ -162,10 +218,23 @@ const ChatPage = () => {
                         <>
                             <div style={styles.chatHeader}>
                                 <div>
-                                    <h3 style={styles.chatHeaderTitle}>{currentRoom.title}</h3>
+                                    <h3 style={styles.chatHeaderTitle}>
+                                        {currentRoom.isPrivate && <span style={{ marginRight: '8px' }}>🔒</span>}
+                                        {currentRoom.title}
+                                    </h3>
                                     <span style={styles.chatHeaderMeta}>참여자 {currentRoom.userCount || 0}명</span>
                                 </div>
-                                <button onClick={handleExitRoom} style={styles.exitBtn}>나가기</button>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    {currentRoom.isPrivate && (
+                                        <>
+                                            <div style={{ ...styles.inviteBtn, backgroundColor: '#f1f5f9', color: '#475569', cursor: 'default', border: '1px solid #e2e8f0' }}>
+                                                🔑 코드: {currentRoomCode}
+                                            </div>
+                                            <button onClick={handleInvite} style={styles.inviteBtn}>이메일 초대</button>
+                                        </>
+                                    )}
+                                    <button onClick={handleExitRoom} style={styles.exitBtn}>나가기</button>
+                                </div>
                             </div>
 
                             <div style={styles.chatWindow}>
@@ -184,7 +253,11 @@ const ChatPage = () => {
                                     return (
                                         <div key={index} style={isMe ? styles.myMsgRow : styles.otherMsgRow}>
                                             {!isMe && (
-                                                <div style={styles.avatar}>{msg.senderName.charAt(0)}</div>
+                                                msg.senderProfileImageUrl ? (
+                                                    <img src={msg.senderProfileImageUrl} alt="profile" style={{width: '36px', height: '36px', borderRadius: '18px', objectFit: 'cover'}} />
+                                                ) : (
+                                                    <div style={styles.avatar}>{msg.senderName.charAt(0)}</div>
+                                                )
                                             )}
                                             <div style={styles.msgContentBlock(isMe)}>
                                                 {!isMe && <div style={styles.authorName}>{msg.senderName}</div>}
@@ -219,9 +292,10 @@ const styles = {
     sidebar: { width: '320px', backgroundColor: '#f8fafc', borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' },
     sidebarHeader: { padding: '24px 20px', borderBottom: '1px solid #e2e8f0' },
     title: { margin: '0 0 20px 0', fontSize: '22px', fontWeight: '800', color: '#0f172a' },
-    createArea: { display: 'flex', gap: '8px' },
-    createInput: { flex: 1, padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '14px' },
-    createBtn: { padding: '0 16px', backgroundColor: '#4285F4', color: '#fff', border: 'none', borderRadius: '12px', cursor: 'pointer', fontSize: '20px', fontWeight: 'bold' },
+    createArea: { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' },
+    createInput: { flex: 1, padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '14px', minWidth: '150px' },
+    privateLabel: { fontSize: '13px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontWeight: '600' },
+    createBtn: { padding: '0 16px', height: '40px', backgroundColor: '#4285F4', color: '#fff', border: 'none', borderRadius: '12px', cursor: 'pointer', fontSize: '20px', fontWeight: 'bold' },
     roomList: { flex: 1, overflowY: 'auto', padding: '12px' },
     emptyRooms: { textAlign: 'center', color: '#94a3b8', marginTop: '40px', fontSize: '14px' },
     roomCard: { padding: '16px', borderRadius: '16px', cursor: 'pointer', marginBottom: '8px', transition: 'background 0.2s', backgroundColor: 'transparent' },
@@ -233,8 +307,9 @@ const styles = {
     mainChat: { flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#fff' },
     emptyChat: { flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', color: '#94a3b8' },
     chatHeader: { padding: '20px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff' },
-    chatHeaderTitle: { margin: '0 0 4px 0', fontSize: '18px', fontWeight: '800', color: '#0f172a' },
+    chatHeaderTitle: { margin: '0 0 4px 0', fontSize: '18px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center' },
     chatHeaderMeta: { fontSize: '13px', color: '#64748b' },
+    inviteBtn: { padding: '8px 16px', backgroundColor: '#e0e7ff', color: '#4338ca', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' },
     exitBtn: { padding: '8px 16px', backgroundColor: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' },
     chatWindow: { flex: 1, padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px', backgroundColor: '#f1f5f9' },
 

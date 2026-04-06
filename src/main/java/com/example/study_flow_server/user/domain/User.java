@@ -32,18 +32,33 @@ public class User {
     @Column(nullable = false)
     private UserRole role;
 
+    @Column(length = 500)
+    private String profileImageUrl;
+
+    @Column(nullable = false)
+    private boolean isBanned = false;
+
     @Builder
-    public User(Long id,String username , String nickname , String email , String password , UserRole role){
+    public User(Long id,String username , String nickname , String email , String password , UserRole role, String profileImageUrl, boolean isBanned){
         this.id = id;
         this.username = username;
         this.nickname = nickname;
         this.email = email;
         this.password = password;
         this.role = role;
+        this.profileImageUrl = profileImageUrl;
+        this.isBanned = isBanned;
+    }
+
+    public void updateBanned(boolean isBanned) {
+        this.isBanned = isBanned;
     }
 
     public void updateNickname(String newNickname){
         this.nickname = newNickname;
     }
 
+    public void updateProfileImage(String profileImageUrl){
+        this.profileImageUrl = profileImageUrl;
+    }
 }

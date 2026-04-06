@@ -28,6 +28,7 @@ const LoginPage = () => {
                 const pureToken = token.startsWith('Bearer ') ? token.substring(7).trim() : token.trim();
                 localStorage.setItem('accessToken', pureToken);
                 localStorage.setItem('username', username);
+                localStorage.setItem('role', response.data.data.role);
 
                 alert("로그인에 성공했습니다!");
                 navigate('/');

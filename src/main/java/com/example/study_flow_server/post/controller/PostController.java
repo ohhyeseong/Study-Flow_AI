@@ -29,7 +29,7 @@ public class PostController {
         return ApiResponse.ok("게시글이 성공적으로 등록되었습니다.");
     }
 
-    @PutMapping("/{postId}")
+    @PutMapping("/{postId:\\d+}")
     public ApiResponse<String> updatePost(
             @PathVariable Long postId,
             @Valid @RequestBody PostCreateDto postCreateDto,
@@ -39,21 +39,44 @@ public class PostController {
         return ApiResponse.ok("게시글이 성공적으로 수정되었습니다.");
     }
 
-    @DeleteMapping("/{postId}")
+    @DeleteMapping("/{postId:\\d+}")
     public ApiResponse<String> deletePost(@PathVariable Long postId) {
         postService.deletePost(postId);
         return ApiResponse.ok("삭제성공");
     }
 
-    @GetMapping("/{postId}")
-    public ApiResponse<PostResponseDto> getPost(@PathVariable Long postId) {
-        PostResponseDto response = postService.getPost(postId);
+    @GetMapping("/{postId:\\d+}")
+    public ApiResponse<PostResponseDto> getPost(
+            @PathVariable Long postId,
+            @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+        String username = customUserDetails != null ? customUserDetails.getUsername() : null;
+        PostResponseDto response = postService.getPost(postId, username);
         return ApiResponse.ok(response);
     }
 
     @GetMapping("/list")
     public ApiResponse<List<PostResponseDto>> getAllPost() {
         List<PostResponseDto> responseDto = postService.getAllPosts();
+        return ApiResponse.ok(responseDto);
+    }
+
+    @GetMapping("/my")
+    public ApiResponse<List<PostResponseDto>> getMyPosts(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
+        List<PostResponseDto> responseDto = postService.getMyPosts(customUserDetails.getUsername());
+        return ApiResponse.ok(responseDto);
+    }
+
+    @PostMapping("/{postId:\\d+}/like")
+    public ApiResponse<Boolean> toggleLike(
+            @PathVariable Long postId,
+            @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+        boolean isLiked = postService.toggleLike(postId, customUserDetails.getUsername());
+        return ApiResponse.ok(isLiked);
+    }
+
+    @GetMapping("/liked")
+    public ApiResponse<List<PostResponseDto>> getLikedPosts(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
+        List<PostResponseDto> responseDto = postService.getLikedPosts(customUserDetails.getUsername());
         return ApiResponse.ok(responseDto);
     }
 }

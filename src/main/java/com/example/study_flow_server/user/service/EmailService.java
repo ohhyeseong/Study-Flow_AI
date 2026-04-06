@@ -62,6 +62,20 @@ public class EmailService {
         return message;
     }
 
+    public void sendStudyInvite(String targetEmail, Long roomId, String roomTitle, String roomCode) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(senderEmail);
+        message.setTo(targetEmail);
+        message.setSubject("[Study-Flow] '" + roomTitle + "' 스터디방 초대장");
+        message.setText("안녕하세요! Study-Flow 스터디에 초대되셨습니다.\n\n" +
+                "📍 방 번호: " + roomId + "번\n" +
+                "📍 방 제목: " + roomTitle + "\n" +
+                "🔑 입장 코드: [" + roomCode + "]\n\n" +
+                "아래 링크를 클릭하여 Study-Flow에 접속한 뒤, 채팅 탭에서 원하시는 방을 클릭 후 코드를 입력해 참가하세요!\n" +
+                "👉 접속 링크: http://localhost:3000/chat");
+        mailSender.send(message);
+    }
+
     private boolean isVerificationSuccessful(String storedCode, String providedCode) {
         return storedCode != null && storedCode.equals(providedCode);
     }

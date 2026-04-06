@@ -32,7 +32,7 @@ public class ChatController {
             @Valid @RequestBody ChatRoomCreateDto dto,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         Long userId = userDetails.getUser().getId();
-        ChatRoomDto room = chatService.createRoom(dto.title(), userId);
+        ChatRoomDto room = chatService.createRoom(dto.title(), userId, dto.isPrivate());
         broadcastRoomList();
         return ApiResponse.ok(room);
     }
@@ -46,9 +46,10 @@ public class ChatController {
     @PostMapping("/{roomId}/enter")
     public ApiResponse<Void> enterRoom(
             @PathVariable Long roomId,
+            @RequestParam(required = false) String roomCode,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         Long userId = userDetails.getUser().getId();
-        ChatResponseDto notice = chatService.enterRoom(roomId, userId);
+        ChatResponseDto notice = chatService.enterRoom(roomId, userId, roomCode);
         if (notice != null) {
             messagingTemplate.convertAndSend("/sub/chat/room/" + roomId, notice);
         }
@@ -60,6 +61,14 @@ public class ChatController {
     public ApiResponse<List<ChatResponseDto>> getAllChats(@PathVariable Long roomId) {
         List<ChatResponseDto> messages = chatService.getChatMessages(roomId);
         return ApiResponse.ok(messages);
+    }
+
+    @GetMapping("/{roomId}/code")
+    public ApiResponse<java.util.Map<String, String>> getRoomCode(
+            @PathVariable Long roomId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        String code = chatService.getRoomCode(roomId, userDetails.getUser().getId());
+        return ApiResponse.ok(java.util.Map.of("code", code));
     }
 
     @MessageMapping("/chat/message")
@@ -81,6 +90,17 @@ public class ChatController {
             messagingTemplate.convertAndSend("/sub/chat/room/" + roomId, notice);
         }
         broadcastRoomList();
+        return ApiResponse.ok();
+    }
+
+    @PostMapping("/{roomId}/invite")
+    public ApiResponse<Void> inviteUser(
+            @PathVariable Long roomId,
+            @RequestBody java.util.Map<String, String> request) {
+        String targetEmail = request.get("email");
+        if (targetEmail != null && !targetEmail.trim().isEmpty()) {
+            chatService.sendRoomInvite(roomId, targetEmail);
+        }
         return ApiResponse.ok();
     }
 

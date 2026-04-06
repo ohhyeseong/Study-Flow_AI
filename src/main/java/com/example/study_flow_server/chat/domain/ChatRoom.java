@@ -21,13 +21,21 @@ public class ChatRoom extends BaseEntity {
     @Column(nullable = false)
     private String title;
 
+    @Column(nullable = false)
+    private boolean isPrivate = false;
+
+    @Column
+    private String roomCode;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "creator_id")
     private User creator;
 
     @Builder
-    public ChatRoom(String title, User creator) {
+    public ChatRoom(String title, User creator, boolean isPrivate, String roomCode) {
         this.title = title;
         this.creator = creator;
+        this.isPrivate = isPrivate;
+        this.roomCode = roomCode;
     }
 }

@@ -10,6 +10,7 @@ public record CommentResponseDto(
         Long id,
         String content,
         String authorName,
+        String authorUsername,
         LocalDateTime createdAt,
         List<CommentResponseDto> children
 ) {
@@ -17,7 +18,8 @@ public record CommentResponseDto(
         return new CommentResponseDto(
                 comment.getId(),
                 comment.getContent(),
-                comment.getUser().getUsername(),
+                comment.getUser() != null ? comment.getUser().getNickname() : "알 수 없음",
+                comment.getUser() != null ? comment.getUser().getUsername() : "unknown",
                 comment.getCreatedAt(),
                 comment.getChildren().stream()
                         .map(CommentResponseDto::from)

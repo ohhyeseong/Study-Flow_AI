@@ -3,8 +3,8 @@ package com.example.study_flow_server.user.controller;
 import com.example.study_flow_server.global.response.ApiResponse;
 import com.example.study_flow_server.global.security.CustomUserDetails;
 import com.example.study_flow_server.user.domain.User;
-import com.example.study_flow_server.user.dto.UserCreateDto;
 import com.example.study_flow_server.user.dto.UserResponseDto;
+import com.example.study_flow_server.user.dto.UserUpdateDto;
 import com.example.study_flow_server.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,22 +20,15 @@ public class UserController {
     @GetMapping("/me")
     public ApiResponse<UserResponseDto> getMyInfo(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
         User user = customUserDetails.getUser();
-
-        UserResponseDto responseDto = new UserResponseDto(
-                user.getId(),
-                user.getUsername(),
-                user.getNickname(),
-                user.getEmail(),
-                user.getRole()
-        );
-
-        return ApiResponse.ok(responseDto);
+        return ApiResponse.ok(UserResponseDto.from(user));
     }
 
-    @PatchMapping("/nickname")
-    public ApiResponse<User> updateNickname(@RequestBody UserCreateDto userCreateDto) {
-        User updatedUser = userService.updateNickname(userCreateDto);
+    @PutMapping("/me")
+    public ApiResponse<UserResponseDto> updateMyInfo(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @RequestBody UserUpdateDto userUpdateDto) {
 
-        return ApiResponse.ok(updatedUser);
+        User updatedUser = userService.updateMyInfo(customUserDetails.getUser().getUsername(), userUpdateDto);
+        return ApiResponse.ok(UserResponseDto.from(updatedUser));
     }
 }

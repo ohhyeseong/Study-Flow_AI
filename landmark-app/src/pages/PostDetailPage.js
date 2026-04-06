@@ -6,7 +6,7 @@ import Header from '../components/Header';
 const PostDetailPage = () => {
     const { postId } = useParams();
     const navigate = useNavigate();
-    const currentUsername = localStorage.getItem('username'); // 로그인한 사용자의 ID (username)
+    const currentUsername = localStorage.getItem('username');
 
     const [post, setPost] = useState(null);
     const [comments, setComments] = useState([]);
@@ -28,7 +28,6 @@ const PostDetailPage = () => {
             const postData = pRes.data.data;
             setPost(postData);
 
-            // PostResponseDto 안에 이미 comments가 들어있으므로 이를 바로 사용합니다!
             setComments(postData.comments || []);
 
             setEditTitle(postData.title);
@@ -55,6 +54,20 @@ const PostDetailPage = () => {
             await apiClient.delete(`/api/posts/${postId}`);
             navigate('/board');
         } catch (e) { alert("삭제 실패"); }
+    };
+
+    const handleToggleLike = async () => {
+        try {
+            const res = await apiClient.post(`/api/posts/${postId}/like`);
+            const isNowLiked = res.data.data;
+            setPost(prev => ({
+                ...prev,
+                isLiked: isNowLiked,
+                likeCount: isNowLiked ? prev.likeCount + 1 : prev.likeCount - 1
+            }));
+        } catch (error) {
+            alert("좋아요 처리에 실패했습니다.");
+        }
     };
 
     const handleCommentSubmit = async (e) => {
@@ -107,7 +120,7 @@ const PostDetailPage = () => {
                     {isEditingPost ? (
                         <div style={styles.editForm}>
                             <input style={styles.editInput} value={editTitle} onChange={e => setEditTitle(e.target.value)} />
-                            <textarea style={{...styles.editTextarea, minHeight: '200px'}} value={editContent} onChange={e => setEditContent(e.target.value)} />
+                            <textarea style={{ ...styles.editTextarea, minHeight: '200px' }} value={editContent} onChange={e => setEditContent(e.target.value)} />
                             <div style={styles.btnGroup}>
                                 <button onClick={handleUpdatePost} style={styles.saveBtn}>저장</button>
                                 <button onClick={() => setIsEditingPost(false)} style={styles.cancelBtn}>취소</button>
@@ -117,11 +130,10 @@ const PostDetailPage = () => {
                         <>
                             <div style={styles.postHeader}>
                                 <h2 style={styles.postTitle}>{post.title}</h2>
-                                {/* 게시글 작성자 버튼 조건: DTO에 맞춰 post.authorName 사용 */}
-                                {currentUsername === post.authorName && (
+                                {currentUsername === post.authorUsername && (
                                     <div style={styles.actionGroup}>
                                         <button onClick={() => setIsEditingPost(true)} style={styles.textBtn}>수정</button>
-                                        <button onClick={handleDeletePost} style={{...styles.textBtn, color: '#ef4444'}}>삭제</button>
+                                        <button onClick={handleDeletePost} style={{ ...styles.textBtn, color: '#ef4444' }}>삭제</button>
                                     </div>
                                 )}
                             </div>
@@ -131,6 +143,20 @@ const PostDetailPage = () => {
                             </div>
                             <hr style={styles.hr} />
                             <div style={styles.postBody}>{post.content}</div>
+
+                            <div style={styles.reactionArea}>
+                                <button
+                                    onClick={handleToggleLike}
+                                    style={{
+                                        ...styles.likeBtn,
+                                        backgroundColor: post.isLiked ? '#fee2e2' : '#f1f5f9',
+                                        color: post.isLiked ? '#ef4444' : '#64748b',
+                                        borderColor: post.isLiked ? '#fecaca' : '#e2e8f0'
+                                    }}
+                                >
+                                    {post.isLiked ? '❤️' : '🤍'} 찜하기 ({post.likeCount || 0})
+                                </button>
+                            </div>
                         </>
                     )}
                 </div>
@@ -152,20 +178,19 @@ const PostDetailPage = () => {
                                             <span style={styles.commentDate}>{new Date(c.createdAt).toLocaleDateString()}</span>
                                             <div style={styles.miniAction}>
                                                 <button onClick={() => setReplyingTo(replyingTo === c.id ? null : c.id)} style={styles.miniBtn}>답글</button>
-                                                {/* 댓글 작성자 버튼 조건: c.authorName 사용 */}
-                                                {currentUsername === c.authorName && (
+                                                {currentUsername === c.authorUsername && (
                                                     <>
                                                         <button onClick={() => { setEditingCommentId(c.id); setEditCommentText(c.content); }} style={styles.miniBtn}>수정</button>
-                                                        <button onClick={() => handleDeleteComment(c.id)} style={{...styles.miniBtn, color: '#ef4444'}}>삭제</button>
+                                                        <button onClick={() => handleDeleteComment(c.id)} style={{ ...styles.miniBtn, color: '#ef4444' }}>삭제</button>
                                                     </>
                                                 )}
                                             </div>
                                         </div>
                                     </div>
                                     {editingCommentId === c.id ? (
-                                        <div style={{marginTop: '10px'}}>
+                                        <div style={{ marginTop: '10px' }}>
                                             <textarea style={styles.editInput} value={editCommentText} onChange={e => setEditCommentText(e.target.value)} />
-                                            <div style={{...styles.btnGroup, marginTop: '5px'}}>
+                                            <div style={{ ...styles.btnGroup, marginTop: '5px' }}>
                                                 <button onClick={() => handleUpdateComment(c.id)} style={styles.saveBtn}>수정완료</button>
                                                 <button onClick={() => setEditingCommentId(null)} style={styles.cancelBtn}>취소</button>
                                             </div>
@@ -185,17 +210,15 @@ const PostDetailPage = () => {
                                     </div>
                                 )}
 
-                                {/* 대댓글 렌더링: c.replies가 아니라 c.children 입니다! */}
                                 {c.children && c.children.map(r => (
                                     <div key={r.id} style={styles.replyItem}>
                                         <div style={styles.commentHeader}>
                                             <strong>↳ {r.authorName}</strong>
                                             <div style={styles.commentRight}>
                                                 <span style={styles.commentDate}>{new Date(r.createdAt).toLocaleDateString()}</span>
-                                                {/* 대댓글 삭제 버튼 */}
-                                                {currentUsername === r.authorName && (
+                                                {currentUsername === r.authorUsername && (
                                                     <div style={styles.miniAction}>
-                                                        <button onClick={() => handleDeleteComment(r.id)} style={{...styles.miniBtn, color: '#ef4444'}}>삭제</button>
+                                                        <button onClick={() => handleDeleteComment(r.id)} style={{ ...styles.miniBtn, color: '#ef4444' }}>삭제</button>
                                                     </div>
                                                 )}
                                             </div>
@@ -230,6 +253,8 @@ const styles = {
     btnGroup: { display: 'flex', justifyContent: 'flex-end', gap: '10px' },
     saveBtn: { padding: '8px 20px', backgroundColor: '#4285F4', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
     cancelBtn: { padding: '8px 20px', backgroundColor: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '8px', cursor: 'pointer' },
+    reactionArea: { display: 'flex', justifyContent: 'center', marginTop: '40px' },
+    likeBtn: { padding: '10px 24px', fontSize: '16px', fontWeight: 'bold', borderRadius: '24px', border: '1px solid', cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '8px' },
     commentSection: { marginTop: '30px', paddingBottom: '50px' },
     commentCount: { fontSize: '18px', fontWeight: '700', marginBottom: '20px' },
     commentForm: { display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '30px' },

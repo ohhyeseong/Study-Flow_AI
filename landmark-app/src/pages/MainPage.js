@@ -5,26 +5,44 @@ const MainPage = () => {
     const navigate = useNavigate();
 
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
 
     useEffect(() => {
         const token = localStorage.getItem('accessToken');
+        const role = localStorage.getItem('role');
         if (token) {
             setIsLoggedIn(true);
+        }
+        if (role === 'ADMIN') {
+            setIsAdmin(true);
         }
     }, []);
 
     const handleLogout = () => {
         localStorage.removeItem('accessToken');
+        localStorage.removeItem('role');
+        localStorage.removeItem('username');
         setIsLoggedIn(false);
+        setIsAdmin(false);
     };
 
     return (
         <div style={styles.layout}>
             <div style={styles.topNav} className="top-nav-mobile">
                 {isLoggedIn ? (
-                    <button style={styles.authBtn} onClick={handleLogout}>
-                        로그아웃
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        {isAdmin && (
+                            <button style={styles.authBtnAdmin} onClick={() => navigate('/admin')}>
+                                관리자 페이지
+                            </button>
+                        )}
+                        <button style={styles.authBtnPrimary} onClick={() => navigate('/mypage')}>
+                            마이페이지
+                        </button>
+                        <button style={styles.authBtn} onClick={handleLogout}>
+                            로그아웃
+                        </button>
+                    </div>
                 ) : (
                     <>
                         <button style={styles.authBtn} onClick={() => navigate('/login')}>
@@ -143,6 +161,7 @@ const styles = {
     topNav: { width: '100%', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '20px 40px', boxSizing: 'border-box', gap: '12px' },
     authBtn: { background: 'transparent', border: 'none', fontSize: '14px', fontWeight: '600', color: '#64748b', cursor: 'pointer', padding: '8px 12px', transition: 'color 0.2s' },
     authBtnPrimary: { background: '#4f46e5', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', color: '#ffffff', cursor: 'pointer', padding: '8px 16px', transition: 'background 0.2s', boxShadow: '0 2px 4px rgba(79, 70, 229, 0.2)' },
+    authBtnAdmin: { background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', fontWeight: '600', color: '#1e293b', cursor: 'pointer', padding: '8px 16px', transition: 'all 0.2s' },
     content: { flex: 1, display: 'flex', justifyContent: 'center', padding: '20px 20px 50px 20px', overflowY: 'auto' },
     heroSection: { maxWidth: '1000px', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' },
     heroTitle: { fontSize: '42px', fontWeight: '800', color: '#1e293b', lineHeight: '1.3', marginBottom: '20px' },

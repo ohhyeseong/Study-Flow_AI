@@ -55,6 +55,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // 💡 다시 DB에서 CustomUserDetails를 가져옵니다!
                     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
+                    if (!userDetails.isAccountNonLocked()) {
+                        log.warn("정지된 사용자 접속 시도: {}", username);
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        response.setContentType("application/json;charset=UTF-8");
+                        response.getWriter().write("{\"success\":false,\"code\":\"FORBIDDEN\",\"message\":\"BANNED_USER\"}");
+                        return;
+                    }
+
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 

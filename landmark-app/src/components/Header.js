@@ -10,11 +10,15 @@ const Header = () => {
     const handleLogout = async () => {
         try {
             await apiClient.post('/api/auth/logout');
-            localStorage.removeItem('token');
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('username');
+            localStorage.removeItem('role');
             navigate('/login');
         } catch (error) {
             console.error('로그아웃 중 오류가 발생했습니다:', error);
-            localStorage.removeItem('token');
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('username');
+            localStorage.removeItem('role');
             navigate('/login');
         }
     };
@@ -51,6 +55,14 @@ const Header = () => {
             </nav>
 
             <div style={styles.userActions}>
+                {localStorage.getItem('role') === 'ADMIN' && (
+                    <button style={getNavStyle('/admin')} onClick={() => navigate('/admin')}>
+                        🛡️ 관리자
+                    </button>
+                )}
+                <button style={getNavStyle('/mypage')} onClick={() => navigate('/mypage')}>
+                    ⚙️ 마이
+                </button>
                 <button style={styles.logoutBtn} onClick={handleLogout}>
                     로그아웃
                 </button>
