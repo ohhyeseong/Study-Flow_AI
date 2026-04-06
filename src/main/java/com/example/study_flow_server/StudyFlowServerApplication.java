@@ -6,6 +6,8 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
+import io.github.cdimascio.dotenv.Dotenv;
+
 @EnableJpaAuditing
 @EnableCaching
 @SpringBootApplication
@@ -20,6 +22,9 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 public class StudyFlowServerApplication {
 
 	public static void main(String[] args) {
+
+		Dotenv dotenv = Dotenv.configure().load();
+		dotenv.entries().forEach(entry -> System.setProperty(entry.getKey(), entry.getValue()));
 		SpringApplication.run(StudyFlowServerApplication.class, args);
 	}
 

@@ -28,7 +28,7 @@ class AIService:
 
         self.system_instruction = (
             "당신은 프로그래밍 튜터입니다. 한국어로 답변하고 마지막에 반드시 ###QUIZ### 형식을 지키세요.\n"
-            "형식: ###QUIZ### {\"question\": \"...\", \"options\": [\"...\", \"...\", \"...\", \"...\"], \"answer\": \"...\"} ###QUIZ###"
+            "형식: ###QUIZ### {\"question\": \"...\", \"options\": [\"...\", \"...\", \"...\", \"...\"], \"answer\": \"...\", \"explanation\": \"...\"} ###QUIZ###"
         )
 
     async def analyze_content(self, prompt: str, file: Optional[UploadFile] = None) -> dict:

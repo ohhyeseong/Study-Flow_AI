@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import Header from '../components/Header';
 
 const PerformancePage = () => {
-    // 포트폴리오 수치 (기존 측정값 반영)
+
     const [stats] = useState([
         { name: '최적화 전 (Local AI)', time: 11.14, color: '#ef4444' },
         { name: '최적화 후 (Redis)', time: 0.06, color: '#22c55e' }
@@ -26,9 +26,9 @@ const PerformancePage = () => {
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={stats} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} />
-                                    <Tooltip cursor={{fill: '#f8fafc'}} />
+                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                                    <Tooltip cursor={{ fill: '#f8fafc' }} />
                                     <Bar dataKey="time" radius={[10, 10, 0, 0]} barSize={50}>
                                         {stats.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={entry.color} />
@@ -48,11 +48,11 @@ const PerformancePage = () => {
                         </div>
                         <div style={styles.statBox}>
                             <span style={styles.statLabel}>평균 응답 속도 (Cache Hit)</span>
-                            <span style={{...styles.statValue, color: '#22c55e'}}>0.06s</span>
+                            <span style={{ ...styles.statValue, color: '#22c55e' }}>0.06s</span>
                         </div>
                         <div style={styles.statBox}>
                             <span style={styles.statLabel}>기존 지연 시간</span>
-                            <span style={{...styles.statValue, color: '#ef4444'}}>11.14s</span>
+                            <span style={{ ...styles.statValue, color: '#ef4444' }}>11.14s</span>
                         </div>
                     </div>
                 </div>

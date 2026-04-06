@@ -2,6 +2,7 @@ package com.example.study_flow_server.user.service;
 
 import com.example.study_flow_server.redis.RedisService;
 import lombok.RequiredArgsConstructor;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;

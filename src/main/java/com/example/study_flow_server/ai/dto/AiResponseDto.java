@@ -11,14 +11,14 @@ import java.util.Optional;
 
 @Slf4j
 public record AiResponseDto(
-        String filename,
+        @JsonProperty("filename") String filename,
         @JsonProperty("user_prompt") String userPrompt,
-        String mode,
+        @JsonProperty("mode") String mode,
         @JsonProperty("extracted_text") String extractedText,
-        String description,
-        AiQuizDto quizDto,
+        @JsonProperty("description") String description,
+        @JsonProperty("quiz_dto") AiQuizDto quizDto,
         @JsonProperty("db_status") String dbStatus,
-        Double responseTime
+        @JsonProperty("response_time") Double responseTime
 ) implements Serializable {
 
     private static final long serialVersionUID = 1L;

@@ -15,7 +15,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -134,7 +133,8 @@ class AiServiceTest {
         MockMultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", "test image".getBytes());
         String prompt = "이 이미지는 무엇인가요?";
 
-        AiResponseDto mockResponse = new AiResponseDto("test.jpg", prompt, null, null, "테스트 응답", null, "Saved");
+        // AiResponseDto record 인자 순서: filename, userPrompt, mode, extractedText, description, quizDto, dbStatus, responseTime
+        AiResponseDto mockResponse = new AiResponseDto("test.jpg", prompt, null, null, "테스트 응답", null, "Saved", 0.0);
 
         given(responseSpec.bodyToMono(AiResponseDto.class)).willReturn(Mono.just(mockResponse));
 

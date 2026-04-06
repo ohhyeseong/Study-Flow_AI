@@ -30,7 +30,7 @@ const LoginPage = () => {
                 localStorage.setItem('username', username);
 
                 alert("로그인에 성공했습니다!");
-                navigate('/main');
+                navigate('/');
                 window.location.reload();
             } else {
                 alert("로그인 성공했으나 서버로부터 토큰을 받지 못했습니다.");
@@ -49,7 +49,7 @@ const LoginPage = () => {
         <div style={styles.container}>
             <div style={styles.loginCard}>
                 <div style={styles.headerArea}>
-                    <h1 style={styles.logoText}>Study-Flow <span style={{color: '#4285F4'}}>AI</span></h1>
+                    <h1 style={styles.logoText}>Study-Flow <span style={{ color: '#4285F4' }}>AI</span></h1>
                     <p style={styles.subtitle}>스마트한 학습의 시작, 다시 몰입해볼까요?</p>
                 </div>
 

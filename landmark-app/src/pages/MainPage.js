@@ -78,6 +78,14 @@ const MainPage = () => {
                                 <p style={styles.cardDesc}>내 주변의 스터디 카페나 도서관을 찾아줍니다.</p>
                             </div>
                         </div>
+
+                        <div style={styles.menuCard} className="menu-card-hover menu-card-mobile" onClick={() => navigate('/chat')}>
+                            <div style={styles.cardIcon}>💬</div>
+                            <div>
+                                <h3 style={styles.cardTitle}>스터디 채팅</h3>
+                                <p style={styles.cardDesc}>다른 학습자들과 실시간으로 소통해보세요.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

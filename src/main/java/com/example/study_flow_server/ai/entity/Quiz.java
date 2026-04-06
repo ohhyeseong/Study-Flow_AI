@@ -36,21 +36,26 @@ public class Quiz {
     @Column(nullable = false)
     private String answer;
 
+    @Column(columnDefinition = "TEXT")
+    private String explanation;
+
     public AiQuizDto toAiQuizDto() {
         return new AiQuizDto(
                 this.id,
                 this.question,
                 new ArrayList<>(this.options),
-                this.answer
+                this.answer,
+                this.explanation
         );
     }
 
     @Builder
-    public Quiz(Long id,AiHistory aiHistory, String question, List<String> options, String answer) {
+    public Quiz(Long id, AiHistory aiHistory, String question, List<String> options, String answer, String explanation) {
         this.id = id;
         this.aiHistory = aiHistory;
         this.question = question;
         this.options = options;
         this.answer = answer;
+        this.explanation = explanation;
     }
 }

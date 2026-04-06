@@ -41,17 +41,19 @@ public class AiDatabaseService {
                         .question(originalQuizDto.question())
                         .options(originalQuizDto.options())
                         .answer(originalQuizDto.answer())
+                        .explanation(originalQuizDto.explanation())
                         .build();
 
-                Quiz savedQuiz = quizRepository.save(quiz); // 저장된 객체를 받음
+                Quiz savedQuiz = quizRepository.save(quiz);
                 log.info(">>> Quiz 저장 완료: ID {}", savedQuiz.getId());
 
-                // 저장된 ID를 포함한 DTO 생성
+                // 저장된 ID와 해설을 포함한 DTO 생성
                 AiQuizDto updatedQuizDto = new AiQuizDto(
-                        savedQuiz.getId(), // 생성된 ID를 넣음
+                        savedQuiz.getId(),
                         originalQuizDto.question(),
                         originalQuizDto.options(),
-                        originalQuizDto.answer()
+                        originalQuizDto.answer(),
+                        originalQuizDto.explanation() // 해설 유지
                 );
 
                 return new AiResponseDto(
@@ -62,8 +64,7 @@ public class AiDatabaseService {
                         response.description(),
                         updatedQuizDto,
                         response.dbStatus(),
-                        response.responseTime()
-                );
+                        response.responseTime());
 
             } catch (Exception e) {
                 log.error("!!! Quiz 저장 실패: {}", e.getMessage());

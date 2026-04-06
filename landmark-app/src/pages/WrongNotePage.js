@@ -35,16 +35,13 @@ const WrongNotePage = () => {
     const handleRetrySubmit = async (opt) => {
         if (isRetryCorrect !== null) return;
         setRetryAnswer(opt);
-        const isCorrect = opt === retryQuiz.correctAnswer;
+        const isCorrect = opt === retryQuiz.answer;
         setIsRetryCorrect(isCorrect);
 
         if (isCorrect) {
             try {
-                await apiClient.delete(`/api/ai/notes/wrong/${retryQuiz.quizId}`);
-                setTimeout(() => {
-                    setWrongNotes(prevNotes => prevNotes.filter(note => note.quizId !== retryQuiz.quizId));
-                    setRetryQuiz(null);
-                }, 1500); // 정답 확인 후 1.5초 뒤 자동 닫힘
+                await apiClient.delete(`/api/ai/notes/wrong/${retryQuiz.quiz_id}`);
+                setWrongNotes(prevNotes => prevNotes.filter(note => note.quiz_id !== retryQuiz.quiz_id));
             } catch (error) {
                 console.error("오답노트 삭제 실패:", error);
             }
@@ -55,13 +52,13 @@ const WrongNotePage = () => {
         <div style={styles.layout}>
             <Header />
             <div style={styles.content}>
-                <div style={styles.dashboard}>
-                    <div style={styles.headerArea}>
+                <div style={styles.dashboard} className="dashboard-mobile">
+                    <div style={styles.headerArea} className="header-area-mobile">
                         <h2 style={styles.title}>📝 나의 오답노트</h2>
                         <p style={styles.subtitle}>틀린 문제를 복습하고 완벽하게 내 것으로 만들어보세요!</p>
                     </div>
                     {!loading && (
-                        <div style={styles.statBox}>
+                        <div style={styles.statBox} className="stat-box-mobile">
                             <span style={styles.statLabel}>현재 복습이 필요한 문제</span>
                             <span style={styles.statNumber}>{wrongNotes.length}개</span>
                         </div>
@@ -77,13 +74,13 @@ const WrongNotePage = () => {
                         <p style={{ color: '#64748b' }}>모든 문제를 완벽하게 이해하셨네요. 계속해서 화이팅입니다!</p>
                     </div>
                 ) : (
-                    <div style={styles.listContainer}>
+                    <div style={styles.listContainer} className="list-container-mobile">
                         {wrongNotes.map((note, index) => (
-                            <div key={`${note.quizId}-${index}`} style={styles.card}>
+                            <div key={`${note.quiz_id}-${index}`} style={styles.card} className="card-mobile">
                                 <div style={styles.cardHeader}>
                                     <div style={styles.badgeGroup}>
                                         <span style={styles.badgeWrong}>오답</span>
-                                        <span style={styles.date}>{note.createdAt ? new Date(note.createdAt).toLocaleDateString() : '날짜 없음'}</span>
+                                        <span style={styles.date}>{note.created_at ? new Date(note.created_at).toLocaleDateString() : '날짜 없음'}</span>
                                     </div>
                                     <button onClick={() => openRetryModal(note)} style={styles.retryBtn}>🔄 다시 풀기</button>
                                 </div>
@@ -92,14 +89,14 @@ const WrongNotePage = () => {
                                     <span style={styles.qMark}>Q.</span> {note.question}
                                 </div>
 
-                                <div style={styles.answerGrid}>
+                                <div style={styles.answerGrid} className="answer-grid-mobile">
                                     <div style={styles.wrongAnswerBox}>
                                         <div style={styles.answerLabel}>❌ 내가 선택한 답</div>
-                                        <div style={styles.answerTextWrong}>{note.userWrongAnswer}</div>
+                                        <div style={styles.answerTextWrong}>{note.user_wrong_answer}</div>
                                     </div>
                                     <div style={styles.correctAnswerBox}>
                                         <div style={styles.answerLabel}>✅ 올바른 정답</div>
-                                        <div style={styles.answerTextCorrect}>{note.correctAnswer}</div>
+                                        <div style={styles.answerTextCorrect}>{note.answer}</div>
                                     </div>
                                 </div>
                             </div>
@@ -114,27 +111,75 @@ const WrongNotePage = () => {
                                 <h3 style={{ margin: 0, color: '#1e293b' }}>🔄 복습 퀴즈</h3>
                                 <button onClick={() => setRetryQuiz(null)} style={styles.closeIcon}>✕</button>
                             </div>
+
+
+                            {retryQuiz.description && (
+                                <div style={styles.descriptionSection}>
+                                    <div style={styles.sectionLabel}>💡 학습 내용 다시보기</div>
+                                    <div style={styles.descriptionText}>{retryQuiz.description}</div>
+                                </div>
+                            )}
+
                             <p style={styles.modalQuestion}>{retryQuiz.question}</p>
                             <div style={styles.optionList}>
                                 {retryQuiz.options && retryQuiz.options.map((opt, idx) => (
                                     <button
                                         key={`option-${idx}`}
                                         onClick={() => handleRetrySubmit(opt)}
-                                        style={styles.modalOptionBtn(retryAnswer === opt, isRetryCorrect, opt === retryQuiz.correctAnswer)}
+                                        style={styles.modalOptionBtn(retryAnswer === opt, isRetryCorrect, opt === retryQuiz.answer)}
                                     >
                                         {opt}
                                     </button>
                                 ))}
                             </div>
+
+
                             {isRetryCorrect !== null && (
                                 <div style={styles.feedbackBox(isRetryCorrect)}>
-                                    {isRetryCorrect ? "✨ 완벽합니다! 정답을 맞혀 오답노트에서 제외됩니다." : "🤔 아쉽네요! 정답과 해설을 다시 확인해 보세요."}
+                                    <div style={{ marginBottom: '10px', fontSize: '16px' }}>
+                                        {isRetryCorrect ? "✨ 완벽합니다! 정답을 맞혀 오답노트에서 제외됩니다." : "🤔 아쉽네요! 정답과 해설을 다시 확인해 보세요."}
+                                    </div>
+                                    {retryQuiz.explanation && (
+                                        <div style={styles.explanationContent}>
+                                            <div style={{ fontWeight: '800', marginBottom: '8px', color: isRetryCorrect ? '#15803d' : '#b91c1c' }}>📝 AI 해설</div>
+                                            <div style={{ fontWeight: '500', lineHeight: '1.5', fontSize: '14px' }}>{retryQuiz.explanation}</div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
                     </div>
                 )}
             </div>
+            <style>{`
+                @media screen and (max-width: 768px) {
+                    .dashboard-mobile {
+                        flex-direction: column !important;
+                        align-items: center !important;
+                        text-align: center !important;
+                        gap: 20px !important;
+                    }
+                    .header-area-mobile {
+                        text-align: center !important;
+                    }
+                    .stat-box-mobile {
+                        width: 100% !important;
+                        align-items: center !important;
+                        padding: 15px !important;
+                    }
+                    .list-container-mobile {
+                        padding: 0 10px 50px 10px !important;
+                    }
+                    .card-mobile {
+                        padding: 20px !important;
+                        border-radius: 20px !important;
+                    }
+                    .answer-grid-mobile {
+                        grid-template-columns: 1fr !important;
+                        gap: 12px !important;
+                    }
+                }
+            `}</style>
         </div>
     );
 };
@@ -167,9 +212,12 @@ const styles = {
     emptyState: { textAlign: 'center', marginTop: '60px', padding: '60px', backgroundColor: '#fff', borderRadius: '24px', border: '1px dashed #cbd5e1', width: '100%', maxWidth: '850px' },
 
     modalOverlay: { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 },
-    modalContent: { backgroundColor: '#fff', padding: '32px', borderRadius: '24px', width: '90%', maxWidth: '450px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' },
+    modalContent: { backgroundColor: '#fff', padding: '32px', borderRadius: '24px', width: '90%', maxWidth: '500px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' },
     modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
     closeIcon: { background: 'none', border: 'none', fontSize: '20px', color: '#94a3b8', cursor: 'pointer' },
+    descriptionSection: { backgroundColor: '#f1f5f9', padding: '16px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #e2e8f0' },
+    sectionLabel: { fontSize: '12px', fontWeight: '800', color: '#4285F4', marginBottom: '8px', textTransform: 'uppercase' },
+    descriptionText: { fontSize: '14px', color: '#334155', lineHeight: '1.6', maxHeight: '120px', overflowY: 'auto', whiteSpace: 'pre-wrap' },
     modalQuestion: { fontWeight: '700', fontSize: '18px', color: '#1e293b', lineHeight: '1.5', marginBottom: '24px' },
     optionList: { display: 'flex', flexDirection: 'column', gap: '10px' },
     modalOptionBtn: (isSelected, isCorrect, isAnswer) => ({
@@ -178,7 +226,8 @@ const styles = {
         borderColor: isSelected ? (isCorrect ? '#22c55e' : '#ef4444') : (isCorrect !== null && isAnswer ? '#22c55e' : '#e2e8f0'),
         color: isSelected ? (isCorrect ? '#166534' : '#991b1b') : '#334155'
     }),
-    feedbackBox: (isCorrect) => ({ marginTop: '20px', padding: '16px', borderRadius: '12px', fontWeight: 'bold', fontSize: '14px', textAlign: 'center', backgroundColor: isCorrect ? '#f0fdf4' : '#fef2f2', color: isCorrect ? '#15803d' : '#b91c1c' })
+    feedbackBox: (isCorrect) => ({ marginTop: '20px', padding: '20px', borderRadius: '20px', fontWeight: '500', fontSize: '14px', textAlign: 'left', backgroundColor: isCorrect ? '#f0fdf4' : '#fef2f2', border: `1px solid ${isCorrect ? '#86efac' : '#fca5a5'}` }),
+    explanationContent: { marginTop: '12px', padding: '16px', backgroundColor: 'rgba(255, 255, 255, 0.5)', borderRadius: '12px', border: '1px dashed rgba(0, 0, 0, 0.1)' }
 };
 
 export default WrongNotePage;

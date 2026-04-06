@@ -81,7 +81,7 @@ const ChatPage = () => {
     };
 
     const connectStomp = () => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('accessToken');
         const socket = new SockJS('http://localhost:8090/ws');
         stompClient.current = Stomp.over(socket);
         stompClient.current.debug = () => {};
@@ -105,7 +105,7 @@ const ChatPage = () => {
 
     const handleSendMessage = () => {
         if (!newMessage.trim() || !stompClient.current?.connected || !currentRoom) return;
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('accessToken');
         stompClient.current.send(
             "/pub/chat/message",
             { Authorization: `Bearer ${token}` },

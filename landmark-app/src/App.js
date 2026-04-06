@@ -2,7 +2,6 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import MainPage from './pages/MainPage';
 import AiChatPage from './pages/AiChatPage';
-import PerformancePage from './pages/PerformancePage';
 import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
 import WrongNotePage from './pages/WrongNotePage';
@@ -17,11 +16,10 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/main" element={<MainPage />} />
+        <Route path="/" element={<MainPage />} />
 
         <Route path="/ai-tutor" element={<AiChatPage />} />
 
-        <Route path="/performance" element={<PerformancePage />} />
 
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />

@@ -70,7 +70,7 @@ public class AiService {
 
         if (responseDto != null) {
             responseDto = responseDto.withResponseTime(totalTime);
-            aiDatabaseService.saveAnalysisResult(user, prompt, responseDto);
+            responseDto = aiDatabaseService.saveAnalysisResult(user, prompt, responseDto);
         }
 
         return responseDto;

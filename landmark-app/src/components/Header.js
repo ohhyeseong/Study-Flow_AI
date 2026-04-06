@@ -27,9 +27,9 @@ const Header = () => {
 
     return (
         <header style={styles.header}>
-            <div style={styles.logoContainer} onClick={() => navigate('/main')}>
+            <div style={styles.logoContainer} onClick={() => navigate('/')}>
                 <span style={styles.logoIcon}>🌊</span>
-                <span style={styles.logoText}>Study-Flow</span>
+                <span style={styles.logoText} className="logo-text">Study-Flow</span>
             </div>
 
             <nav style={styles.navMenu} className="header-nav-mobile">
@@ -45,6 +45,9 @@ const Header = () => {
                 <button style={getNavStyle('/wrong-notes')} onClick={() => navigate('/wrong-notes')}>
                     📝 오답노트
                 </button>
+                <button style={getNavStyle('/chat')} onClick={() => navigate('/chat')}>
+                    🤖 DM
+                </button>
             </nav>
 
             <div style={styles.userActions}>
@@ -57,33 +60,53 @@ const Header = () => {
                 @media screen and (max-width: 768px) {
                     header {
                         flex-direction: column !important;
-                        padding: 15px 10px !important;
+                        padding: 10px 15px !important;
                         height: auto !important;
-                        gap: 15px !important;
-                        position: relative !important;
+                        gap: 12px !important;
                     }
+                    /* 로고와 로그아웃을 한 줄에 배치 */
+                    header > div:first-child { 
+                        width: 100% !important;
+                        display: flex !important;
+                        justify-content: space-between !important;
+                        align-items: center !important;
+                    }
+                    header > div:last-child {
+                        width: auto !important;
+                        margin-top: 0 !important;
+                    }
+                    /* 로고 텍스트 크기 살짝 조정 */
+                    header .logo-text {
+                        font-size: 18px !important;
+                    }
+                    
+                    /* 네비게이션을 좌우 스크롤 방식으로 변경 */
                     .header-nav-mobile {
                         width: 100% !important;
                         display: flex !important;
                         overflow-x: auto !important;
-                        justify-content: flex-start !important;
-                        padding-bottom: 5px !important;
-                        gap: 8px !important;
-                        -ms-overflow-style: none;
-                        scrollbar-width: none;
+                        justify-content: flex-start !important; /* 스크롤을 위해 왼쪽 정렬 */
+                        padding-bottom: 4px !important;
+                        gap: 4px !important;
+                        -ms-overflow-style: none; /* IE/Edge */
+                        scrollbar-width: none; /* Firefox */
                     }
                     .header-nav-mobile::-webkit-scrollbar {
-                        display: none;
+                        display: none; /* Chrome/Safari */
                     }
                     .header-nav-mobile button {
                         white-space: nowrap !important;
                         padding: 8px 12px !important;
-                        font-size: 14px !important;
+                        font-size: 13px !important;
                         flex-shrink: 0 !important;
+                        background-color: #f8fafc !important;
+                        border-radius: 10px !important;
                     }
+                    
+                    /* 로그아웃 버튼을 상단 우측으로 이동 */
                     header > div:last-child {
                         position: absolute !important;
-                        top: 15px !important;
+                        top: 10px !important;
                         right: 15px !important;
                     }
                     header > div:last-child button {
