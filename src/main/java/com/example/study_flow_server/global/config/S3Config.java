@@ -11,10 +11,10 @@ import software.amazon.awssdk.services.s3.S3Client;
 @Configuration
 public class S3Config {
 
-    @Value("${cloud.aws.credentials.access-key:}")
+    @Value("${cloud.aws.credentials.access-key:dummy}")
     private String accessKey;
 
-    @Value("${cloud.aws.credentials.secret-key:}")
+    @Value("${cloud.aws.credentials.secret-key:dummy}")
     private String secretKey;
 
     @Value("${cloud.aws.region.static:ap-northeast-2}")
