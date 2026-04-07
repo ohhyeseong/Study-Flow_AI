@@ -1,6 +1,14 @@
 version: '3.8'
 
 services:
+  # 프론트엔드 (Nginx)
+  frontend:
+    build: ./landmark-app
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
   # 백엔드
   backend:
     build: .
