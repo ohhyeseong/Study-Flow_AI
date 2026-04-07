@@ -3,7 +3,7 @@ FROM python:3.11
 
 # 2. 필수 시스템 패키지 설치 (OpenCV, EasyOCR 실행에 필요)
 RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx \
+    libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 # 3. 작업 디렉토리 설정
