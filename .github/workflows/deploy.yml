@@ -9,11 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-
-      # 1. Docker Build (Optional: Docker Hub를 사용하지 않고 서버에서 직접 빌드하는 방식)
-      # 서버 성능이 낮으면 GitHub Actions에서 빌드해서 Push하는 것이 좋지만, 
-      # 여기서는 가장 간단한 '서버에서 git pull 후 Restart' 방식을 예시로 듭니다.
+        uses: actions/checkout@v4
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v0.1.10
