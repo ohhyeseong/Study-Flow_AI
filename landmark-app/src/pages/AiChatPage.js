@@ -11,20 +11,20 @@ const AiChatPage = () => {
     const [inputMessage, setInputMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [selectedFile, setSelectedFile] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState(null);
     const fileInputRef = useRef(null);
     const messagesEndRef = useRef(null);
 
-    // 퀴즈 관련 상태
     const [activeQuiz, setActiveQuiz] = useState(null);
     const [showQuizModal, setShowQuizModal] = useState(false);
     const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
-    const [quizResult, setQuizResult] = useState(null); // { isCorrect: boolean }
+    const [quizResult, setQuizResult] = useState(null);
 
     useEffect(() => {
         const fetchHistory = async () => {
             const welcomeMessage = {
                 role: 'ai',
-                content: "안녕하세요! 저는 당신의 스마트 학습 튜터 Flow입니다. 궁금한 점을 텍스트로 물어보시거나 자료(이미지)를 업로드하여 분석을 요청해보세요! ✨"
+                content: "안녕하세요! 저는 당신의 스마트 학습 강사 Flow입니다. 궁금한 점을 텍스트로 물어보시거나 자료(이미지)를 업로드하여 분석을 요청해보세요! ✨"
             };
 
             try {
@@ -34,15 +34,20 @@ const AiChatPage = () => {
                 if (Array.isArray(historyData) && historyData.length > 0) {
                     const formattedHistory = [];
                     historyData.forEach(item => {
-                        const userText = item.prompt || item.userPrompt || item.question || "";
-                        const aiText = item.answer || item.description || item.aiResponse || "";
-                        
-                        if (userText) formattedHistory.push({ role: 'user', content: userText });
-                        if (aiText) formattedHistory.push({ 
-                            role: 'ai', 
-                            content: aiText,
-                            quiz: item.quiz_dto
-                        });
+                        if (item.user_prompt) {
+                            formattedHistory.push({
+                                role: 'user',
+                                content: item.user_prompt,
+                                imageUrl: item.image_url
+                            });
+                        }
+                        if (item.ai_response) {
+                            formattedHistory.push({
+                                role: 'ai',
+                                content: item.ai_response,
+                                quiz: item.quiz_dto
+                            });
+                        }
                     });
 
                     setMessages([welcomeMessage, ...formattedHistory]);
@@ -59,9 +64,20 @@ const AiChatPage = () => {
 
     const handleFileChange = (e) => {
         if (e.target.files && e.target.files[0]) {
-            setSelectedFile(e.target.files[0]);
+            const file = e.target.files[0];
+            setSelectedFile(file);
+            const url = URL.createObjectURL(file);
+            setPreviewUrl(url);
         }
         e.target.value = null;
+    };
+
+    const handleRemoveFile = () => {
+        if (previewUrl) {
+            URL.revokeObjectURL(previewUrl);
+        }
+        setSelectedFile(null);
+        setPreviewUrl(null);
     };
 
     const handleSendMessage = async (e) => {
@@ -78,12 +94,19 @@ const AiChatPage = () => {
                 : "[이미지 첨부됨] 이 이미지를 분석해 주세요.";
         }
 
-        const userMsg = { role: 'user', content: displayMessage };
+        const fileToSend = selectedFile;
+        const currentPreviewUrl = previewUrl;
+
+        const userMsg = {
+            role: 'user',
+            content: displayMessage,
+            imageUrl: currentPreviewUrl
+        };
         setMessages(prev => [...prev, userMsg]);
 
         setInputMessage('');
-        const fileToSend = selectedFile;
         setSelectedFile(null);
+        setPreviewUrl(null);
         setIsLoading(true);
 
         try {
@@ -107,6 +130,22 @@ const AiChatPage = () => {
                 content: responseData.description || "결과를 가져오지 못했습니다.",
                 quiz: responseData.quiz_dto
             };
+
+            if (responseData.s3_url) {
+                setMessages(prev => {
+                    const newMessages = [...prev];
+                    const lastUserMsgIndex = newMessages.findLastIndex(m => m.role === 'user');
+                    if (lastUserMsgIndex !== -1) {
+                        const oldUrl = newMessages[lastUserMsgIndex].imageUrl;
+                        if (oldUrl && oldUrl.startsWith('blob:')) {
+                            URL.revokeObjectURL(oldUrl);
+                        }
+                        newMessages[lastUserMsgIndex] = { ...newMessages[lastUserMsgIndex], imageUrl: responseData.s3_url };
+                    }
+                    return newMessages;
+                });
+            }
+
             setMessages(prev => [...prev, aiMsg]);
         } catch (error) {
             setMessages(prev => [...prev, { role: 'ai', content: "죄송합니다. 서버 연결 또는 분석 중 문제가 발생했습니다." }]);
@@ -123,18 +162,18 @@ const AiChatPage = () => {
 
     const handleQuizSubmit = async (selectedOption) => {
         if (quizResult !== null || isSubmittingQuiz) return;
-        
+
         setIsSubmittingQuiz(true);
         try {
             const isCorrect = selectedOption === activeQuiz.answer;
-            
+
             await apiClient.post('/api/ai/quiz/submit', {
                 quiz_id: activeQuiz.quiz_id,
                 user_answer: selectedOption
             });
 
             setQuizResult({ isCorrect, selected: selectedOption });
-            
+
             if (isCorrect) {
                 setTimeout(() => {
                     setShowQuizModal(false);
@@ -172,13 +211,18 @@ const AiChatPage = () => {
                                 )}
                                 <div className="ai-msg-column">
                                     <div className={msg.role === 'user' ? 'ai-my-bubble' : 'ai-ai-bubble'}>
+                                        {msg.imageUrl && (
+                                            <div className="ai-msg-image-wrapper">
+                                                <img src={msg.imageUrl} alt="첨부 이미지" className="ai-msg-image" />
+                                            </div>
+                                        )}
                                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                             {msg.content}
                                         </ReactMarkdown>
                                     </div>
                                     {msg.role === 'ai' && msg.quiz && (
                                         <div className="ai-quiz-wrapper">
-                                            <button 
+                                            <button
                                                 className="ai-quiz-start-btn"
                                                 onClick={() => openQuizModal(msg.quiz)}
                                             >
@@ -208,8 +252,13 @@ const AiChatPage = () => {
                     <div className="ai-input-wrapper">
                         {selectedFile && (
                             <div className="ai-file-preview">
+                                {previewUrl && (
+                                    <div className="ai-preview-thumbnail-wrapper">
+                                        <img src={previewUrl} alt="미리보기" className="ai-preview-thumbnail" />
+                                    </div>
+                                )}
                                 <span className="ai-file-name">🖼️ {selectedFile.name}</span>
-                                <button type="button" onClick={() => setSelectedFile(null)} className="ai-file-remove-btn">✕</button>
+                                <button type="button" onClick={handleRemoveFile} className="ai-file-remove-btn">✕</button>
                             </div>
                         )}
 
@@ -246,7 +295,6 @@ const AiChatPage = () => {
                 </div>
             </div>
 
-            {/* 퀴즈 모달 Overlay */}
             {showQuizModal && activeQuiz && (
                 <div className="ai-modal-overlay">
                     <div className="ai-modal-content">
@@ -254,13 +302,13 @@ const AiChatPage = () => {
                             <h3 className="ai-modal-title">🧠 챌린지 퀴즈</h3>
                             <button className="ai-modal-close" onClick={() => setShowQuizModal(false)}>✕</button>
                         </div>
-                        
+
                         <div className="ai-modal-body">
                             <p className="ai-quiz-question">{activeQuiz.question}</p>
-                            
+
                             <div className="ai-quiz-options">
                                 {activeQuiz.options.map((opt, idx) => (
-                                    <button 
+                                    <button
                                         key={idx}
                                         className={`ai-quiz-option-btn ${quizResult && opt === activeQuiz.answer ? 'correct' : ''} ${quizResult && !quizResult.isCorrect && quizResult.selected === opt ? 'wrong' : ''}`}
                                         onClick={() => handleQuizSubmit(opt)}
@@ -298,8 +346,10 @@ const cssParams = `
 .ai-ai-msg-row { align-self: flex-start; display: flex; align-items: flex-start; gap: 10px; max-width: 80%; }
 .ai-avatar { width: 36px; height: 36px; border-radius: 18px; background-color: #1e293b; color: #fff; font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .ai-msg-column { display: flex; flex-direction: column; gap: 8px; }
-.ai-my-bubble { padding: 16px 20px; border-radius: 24px 24px 0 24px; background-color: #4285F4; color: #fff; font-size: 15px; line-height: 1.6; box-shadow: 0 4px 6px rgba(66, 133, 244, 0.2); word-break: break-word; }
-.ai-ai-bubble { padding: 16px 20px; border-radius: 24px 24px 24px 0; background-color: #fff; color: #334155; font-size: 15px; line-height: 1.6; box-shadow: 0 4px 6px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; word-break: break-word; overflow-x: auto; }
+.ai-my-bubble { padding: 16px 20px; border-radius: 24px 24px 0 24px; background-color: #4285F4; color: #fff; font-size: 15px; line-height: 1.6; box-shadow: 0 4px 6px rgba(66, 133, 244, 0.2); word-break: break-word; display: flex; flex-direction: column; gap: 10px; }
+.ai-ai-bubble { padding: 16px 20px; border-radius: 24px 24px 24px 0; background-color: #fff; color: #334155; font-size: 15px; line-height: 1.6; box-shadow: 0 4px 6px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; word-break: break-word; overflow-x: auto; display: flex; flex-direction: column; gap: 10px; }
+.ai-msg-image-wrapper { width: 100%; max-width: 300px; border-radius: 12px; overflow: hidden; }
+.ai-msg-image { width: 100%; height: auto; display: block; object-fit: contain; }
 
 .ai-quiz-wrapper { padding-left: 5px; }
 .ai-quiz-start-btn { padding: 8px 16px; border-radius: 12px; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: #fff; border: none; font-size: 13px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: 0.2s; }
@@ -327,9 +377,12 @@ const cssParams = `
 @keyframes bounceIn { 0% { transform: scale(0.9); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
 
 .ai-input-wrapper { display: flex; flex-direction: column; border-top: 1px solid #f1f5f9; background-color: #fff; }
-.ai-file-preview { display: flex; align-items: center; gap: 10px; padding: 10px 30px; background-color: #f8fafc; border-bottom: 1px solid #e2e8f0; }
-.ai-file-name { font-size: 13px; color: #475569; font-weight: 600; display: flex; align-items: center; }
-.ai-file-remove-btn { background: none; border: none; color: #ef4444; font-size: 14px; cursor: pointer; font-weight: bold; padding: 2px 6px; }
+.ai-file-preview { display: flex; align-items: center; gap: 12px; padding: 12px 30px; background-color: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.ai-preview-thumbnail-wrapper { width: 40px; height: 40px; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; background: #fff; flex-shrink: 0; }
+.ai-preview-thumbnail { width: 100%; height: 100%; object-fit: cover; }
+.ai-file-name { font-size: 13px; color: #475569; font-weight: 600; display: flex; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.ai-file-remove-btn { background: #f1f5f9; border: none; color: #64748b; font-size: 12px; cursor: pointer; font-weight: bold; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-left: auto; transition: 0.2s; }
+.ai-file-remove-btn:hover { background: #fee2e2; color: #ef4444; }
 .ai-input-area { padding: 15px 30px; display: flex; gap: 12px; align-items: center; }
 .ai-attach-btn { width: 45px; height: 45px; border-radius: 50%; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #64748b; font-size: 20px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; flex-shrink: 0; }
 .ai-chat-input { flex: 1; padding: 16px 24px; border-radius: 30px; border: 1px solid #e2e8f0; background-color: #f8fafc; outline: none; font-size: 15px; transition: border 0.2s; min-width: 0; }
@@ -357,4 +410,4 @@ const cssParams = `
 
 const AiChatStyle = () => <style>{cssParams}</style>;
 
-export default () => <><AiChatStyle/><AiChatPage/></>;
+export default () => <><AiChatStyle /><AiChatPage /></>;

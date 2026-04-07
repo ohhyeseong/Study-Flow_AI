@@ -1,0 +1,40 @@
+name: Deploy to AWS Lightsail
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 1. Docker Build (Optional: Docker Hub를 사용하지 않고 서버에서 직접 빌드하는 방식)
+      # 서버 성능이 낮으면 GitHub Actions에서 빌드해서 Push하는 것이 좋지만, 
+      # 여기서는 가장 간단한 '서버에서 git pull 후 Restart' 방식을 예시로 듭니다.
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/Study-Flow_AI
+            git pull origin main
+            
+            # .env 파일 생성 (Secrets 활용)
+            echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" > .env
+            echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env
+            echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> .env
+            echo "AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }}" >> .env
+            echo "AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}" >> .env
+            echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
+            echo "AWS_BUCKET_NAME=${{ secrets.AWS_BUCKET_NAME }}" >> .env
+            echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" >> .env
+            
+            # Docker Compose 실행
+            docker compose down
+            docker compose up -d --build

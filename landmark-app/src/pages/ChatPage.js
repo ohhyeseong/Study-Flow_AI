@@ -42,7 +42,7 @@ const ChatPage = () => {
             await apiClient.post('/api/chat/rooms', { title: newRoomTitle, isPrivate: isPrivateRoom });
             setNewRoomTitle('');
             setIsPrivateRoom(false);
-            fetchRooms(); // 방 생성 후 목록 새로고침
+            fetchRooms();
         } catch (error) {
             console.error(error);
             alert("방 생성에 실패했습니다.");
@@ -176,10 +176,13 @@ const ChatPage = () => {
     return (
         <div style={styles.layout}>
             <Header />
-            <div style={styles.container}>
+            <div style={styles.container} className="chat-container-inner">
 
                 {/* 좌측: 채팅방 목록 패널 (Sidebar) */}
-                <div style={styles.sidebar}>
+                <div 
+                    style={{...styles.sidebar, display: currentRoom ? (window.innerWidth <= 768 ? 'none' : 'flex') : 'flex'}}
+                    className="room-sidebar"
+                >
                     <div style={styles.sidebarHeader}>
                         <h2 style={styles.title}>💬 스터디 채팅</h2>
                         <div style={styles.createArea}>
@@ -208,7 +211,10 @@ const ChatPage = () => {
                 </div>
 
                 {/* 우측: 실제 채팅창 패널 (Main) */}
-                <div style={styles.mainChat}>
+                <div 
+                    style={{...styles.mainChat, display: !currentRoom && window.innerWidth <= 768 ? 'none' : 'flex'}}
+                    className="chat-main"
+                >
                     {!currentRoom ? (
                         <div style={styles.emptyChat}>
                             <div style={{ fontSize: '40px', marginBottom: '15px' }}>👈</div>
@@ -217,17 +223,22 @@ const ChatPage = () => {
                     ) : (
                         <>
                             <div style={styles.chatHeader}>
-                                <div>
-                                    <h3 style={styles.chatHeaderTitle}>
-                                        {currentRoom.isPrivate && <span style={{ marginRight: '8px' }}>🔒</span>}
-                                        {currentRoom.title}
-                                    </h3>
-                                    <span style={styles.chatHeaderMeta}>참여자 {currentRoom.userCount || 0}명</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <button onClick={() => setCurrentRoom(null)} style={styles.listBtnMobile} className="list-btn-mobile">
+                                        ⬅️ 목록
+                                    </button>
+                                    <div>
+                                        <h3 style={styles.chatHeaderTitle}>
+                                            {currentRoom.isPrivate && <span style={{ marginRight: '8px' }}>🔒</span>}
+                                            {currentRoom.title}
+                                        </h3>
+                                        <span style={styles.chatHeaderMeta}>참여자 {currentRoom.userCount || 0}명</span>
+                                    </div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     {currentRoom.isPrivate && (
                                         <>
-                                            <div style={{ ...styles.inviteBtn, backgroundColor: '#f1f5f9', color: '#475569', cursor: 'default', border: '1px solid #e2e8f0' }}>
+                                            <div style={styles.inviteCodeBadge}>
                                                 🔑 코드: {currentRoomCode}
                                             </div>
                                             <button onClick={handleInvite} style={styles.inviteBtn}>이메일 초대</button>
@@ -254,7 +265,7 @@ const ChatPage = () => {
                                         <div key={index} style={isMe ? styles.myMsgRow : styles.otherMsgRow}>
                                             {!isMe && (
                                                 msg.senderProfileImageUrl ? (
-                                                    <img src={msg.senderProfileImageUrl} alt="profile" style={{width: '36px', height: '36px', borderRadius: '18px', objectFit: 'cover'}} />
+                                                    <img src={msg.senderProfileImageUrl} alt="profile" style={{ width: '36px', height: '36px', borderRadius: '18px', objectFit: 'cover' }} />
                                                 ) : (
                                                     <div style={styles.avatar}>{msg.senderName.charAt(0)}</div>
                                                 )
@@ -262,7 +273,7 @@ const ChatPage = () => {
                                             <div style={styles.msgContentBlock(isMe)}>
                                                 {!isMe && <div style={styles.authorName}>{msg.senderName}</div>}
                                                 <div style={{ display: 'flex', alignItems: 'flex-end', flexDirection: isMe ? 'row' : 'row-reverse', gap: '8px' }}>
-                                                    <span style={styles.timeLabel}>{formatTime(msg.createdAt)}</span>
+                                                    <span style={styles.timeLabel} className="time-label-mobile">{formatTime(msg.createdAt)}</span>
                                                     <div style={isMe ? styles.myBubble : styles.otherBubble}>{msg.content}</div>
                                                 </div>
                                             </div>
@@ -280,55 +291,81 @@ const ChatPage = () => {
                     )}
                 </div>
             </div>
+            <style>{`
+                @media screen and (max-width: 768px) {
+                    .room-sidebar { 
+                        display: ${currentRoom ? 'none' : 'flex'} !important; 
+                        width: 100% !important; 
+                        border: none !important;
+                    }
+                    .chat-main { 
+                        display: ${currentRoom ? 'flex' : 'none'} !important; 
+                        width: 100% !important; 
+                    }
+                    .chat-container-inner {
+                        margin: 0 !important;
+                        width: 100% !important;
+                        height: 100% !important;
+                        border-radius: 0 !important;
+                    }
+                    .list-btn-mobile {
+                        display: flex !important;
+                    }
+                    .time-label-mobile { display: none !important; }
+                }
+            `}</style>
         </div>
     );
 };
 
 const styles = {
-    layout: { height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#e2e8f0', overflow: 'hidden' },
+    layout: { height: '100vh', height: '100dvh', display: 'flex', flexDirection: 'column', backgroundColor: '#f1f5f9', overflow: 'hidden' },
     container: { flex: 1, display: 'flex', maxWidth: '1200px', margin: '20px auto', width: '95%', backgroundColor: '#fff', borderRadius: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', overflow: 'hidden' },
 
     // Sidebar (방 목록)
     sidebar: { width: '320px', backgroundColor: '#f8fafc', borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' },
-    sidebarHeader: { padding: '24px 20px', borderBottom: '1px solid #e2e8f0' },
+    sidebarHeader: { padding: '24px 20px', borderBottom: '1px solid #e2e8f0', flexShrink: 0 },
     title: { margin: '0 0 20px 0', fontSize: '22px', fontWeight: '800', color: '#0f172a' },
     createArea: { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' },
     createInput: { flex: 1, padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '14px', minWidth: '150px' },
     privateLabel: { fontSize: '13px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontWeight: '600' },
     createBtn: { padding: '0 16px', height: '40px', backgroundColor: '#4285F4', color: '#fff', border: 'none', borderRadius: '12px', cursor: 'pointer', fontSize: '20px', fontWeight: 'bold' },
-    roomList: { flex: 1, overflowY: 'auto', padding: '12px' },
+    roomList: { flex: 1, overflowY: 'auto', padding: '10px' },
     emptyRooms: { textAlign: 'center', color: '#94a3b8', marginTop: '40px', fontSize: '14px' },
-    roomCard: { padding: '16px', borderRadius: '16px', cursor: 'pointer', marginBottom: '8px', transition: 'background 0.2s', backgroundColor: 'transparent' },
-    roomCardActive: { padding: '16px', borderRadius: '16px', cursor: 'pointer', marginBottom: '8px', backgroundColor: '#e0e7ff', borderLeft: '4px solid #4338ca' },
-    roomTitle: { fontWeight: '700', fontSize: '15px', color: '#1e293b', marginBottom: '6px' },
+    roomCard: { padding: '14px 16px', borderRadius: '16px', cursor: 'pointer', marginBottom: '8px', transition: 'all 0.2s', backgroundColor: 'transparent' },
+    roomCardActive: { padding: '14px 16px', borderRadius: '16px', cursor: 'pointer', marginBottom: '8px', backgroundColor: '#eef2ff', borderLeft: '4px solid #4f46e5' },
+    roomInfo: { display: 'flex', flexDirection: 'column', gap: '4px' },
+    roomTitle: { fontWeight: '700', fontSize: '15px', color: '#1e293b' },
     roomMeta: { fontSize: '12px', color: '#64748b' },
 
     // Main Chat (채팅창)
-    mainChat: { flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#fff' },
-    emptyChat: { flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', color: '#94a3b8' },
-    chatHeader: { padding: '20px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff' },
-    chatHeaderTitle: { margin: '0 0 4px 0', fontSize: '18px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center' },
-    chatHeaderMeta: { fontSize: '13px', color: '#64748b' },
-    inviteBtn: { padding: '8px 16px', backgroundColor: '#e0e7ff', color: '#4338ca', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' },
-    exitBtn: { padding: '8px 16px', backgroundColor: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' },
-    chatWindow: { flex: 1, padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px', backgroundColor: '#f1f5f9' },
+    mainChat: { flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#fff', minWidth: 0 },
+    emptyChat: { flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', color: '#94a3b8', backgroundColor: '#fcfcfc' },
+    chatHeader: { padding: '12px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', flexShrink: 0 },
+    listBtnMobile: { display: 'none', padding: '8px 12px', backgroundColor: '#f1f5f9', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', alignItems: 'center', gap: '5px' },
+    chatHeaderTitle: { margin: 0, fontSize: '17px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center' },
+    chatHeaderMeta: { fontSize: '12px', color: '#64748b' },
+    inviteCodeBadge: { padding: '6px 14px', backgroundColor: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '20px', fontSize: '13px', fontWeight: '700' },
+    inviteBtn: { padding: '8px 16px', backgroundColor: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' },
+    exitBtn: { padding: '8px 16px', backgroundColor: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' },
+    chatWindow: { flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: '#fcfcfc' },
 
     // Message Styles
-    sysMsgWrapper: { display: 'flex', justifyContent: 'center', margin: '10px 0' },
-    sysMsg: { backgroundColor: '#e2e8f0', color: '#475569', padding: '6px 16px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' },
-    myMsgRow: { alignSelf: 'flex-end', display: 'flex', alignItems: 'flex-end' },
-    otherMsgRow: { alignSelf: 'flex-start', display: 'flex', alignItems: 'flex-start', gap: '10px' },
-    avatar: { width: '36px', height: '36px', borderRadius: '18px', backgroundColor: '#cbd5e1', color: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', fontSize: '14px' },
-    msgContentBlock: (isMe) => ({ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }),
-    authorName: { fontSize: '13px', color: '#475569', marginBottom: '6px', fontWeight: '600', marginLeft: '4px' },
-    timeLabel: { fontSize: '11px', color: '#94a3b8', marginBottom: '4px' },
-    myBubble: { padding: '12px 18px', borderRadius: '20px 20px 0 20px', backgroundColor: '#4285F4', color: '#fff', maxWidth: '400px', fontSize: '15px', lineHeight: '1.5', boxShadow: '0 4px 6px -1px rgba(66, 133, 244, 0.2)' },
-    otherBubble: { padding: '12px 18px', borderRadius: '20px 20px 20px 0', backgroundColor: '#fff', color: '#1e293b', maxWidth: '400px', fontSize: '15px', lineHeight: '1.5', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' },
+    sysMsgWrapper: { display: 'flex', justifyContent: 'center', margin: '8px 0' },
+    sysMsg: { backgroundColor: '#f1f5f9', color: '#64748b', padding: '5px 14px', borderRadius: '15px', fontSize: '11px', fontWeight: '700' },
+    myMsgRow: { alignSelf: 'flex-end', display: 'flex', alignItems: 'flex-end', maxWidth: '85%' },
+    otherMsgRow: { alignSelf: 'flex-start', display: 'flex', alignItems: 'flex-start', gap: '8px', maxWidth: '85%' },
+    avatar: { width: '34px', height: '34px', borderRadius: '50%', backgroundColor: '#cbd5e1', color: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', fontSize: '12px', flexShrink: 0 },
+    msgContentBlock: (isMe) => ({ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start', minWidth: 0 }),
+    authorName: { fontSize: '12px', color: '#475569', marginBottom: '4px', fontWeight: '700', marginLeft: '2px' },
+    timeLabel: { fontSize: '10px', color: '#94a3b8', flexShrink: 0 },
+    myBubble: { padding: '10px 16px', borderRadius: '18px 18px 0 18px', backgroundColor: '#4285F4', color: '#fff', fontSize: '15px', lineHeight: '1.5', boxShadow: '0 4px 6px -1px rgba(66, 133, 244, 0.2)', wordBreak: 'break-word' },
+    otherBubble: { padding: '10px 16px', borderRadius: '18px 18px 18px 0', backgroundColor: '#fff', color: '#1e293b', fontSize: '15px', lineHeight: '1.5', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9', wordBreak: 'break-word' },
 
     // Input Area
-    inputArea: { padding: '20px 24px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '12px', backgroundColor: '#fff' },
-    chatInput: { flex: 1, padding: '16px 20px', borderRadius: '30px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '15px', backgroundColor: '#f8fafc' },
-    sendBtn: { padding: '0 28px', backgroundColor: '#4285F4', color: '#fff', border: 'none', borderRadius: '30px', cursor: 'pointer', fontWeight: 'bold', fontSize: '15px', boxShadow: '0 4px 6px -1px rgba(66, 133, 244, 0.3)' }
+    inputArea: { padding: '16px 20px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '10px', backgroundColor: '#fff', flexShrink: 0, paddingBottom: 'calc(16px + env(safe-area-inset-bottom))' },
+    chatInput: { flex: 1, padding: '12px 20px', borderRadius: '25px', border: '1px solid #e2e8f0', outline: 'none', fontSize: '15px', backgroundColor: '#f8fafc' },
+    sendBtn: { padding: '0 24px', height: '42px', backgroundColor: '#4285F4', color: '#fff', border: 'none', borderRadius: '25px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', boxShadow: '0 4px 10px rgba(66, 133, 244, 0.3)' }
 };
 
 export default ChatPage;

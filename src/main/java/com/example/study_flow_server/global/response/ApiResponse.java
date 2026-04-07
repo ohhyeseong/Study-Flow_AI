@@ -20,6 +20,9 @@ public record ApiResponse<T>(
     public static ApiResponse<Void> error(ErrorCode errorCode){
         return new ApiResponse<>(false,errorCode.name(),errorCode.getMessage(), null, null);
     }
+    public static ApiResponse<Void> error(ErrorCode errorCode, String message){
+        return new ApiResponse<>(false,errorCode.name(),message, null, null);
+    }
     public static ApiResponse<Void> error(ErrorCode errorCode, Map<String, String> errors){
         return new ApiResponse<>(false,errorCode.name(),errorCode.getMessage(), null, errors);
     }

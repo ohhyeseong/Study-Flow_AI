@@ -118,12 +118,13 @@ const Header = () => {
                     /* 로그아웃 버튼을 상단 우측으로 이동 */
                     header > div:last-child {
                         position: absolute !important;
-                        top: 10px !important;
-                        right: 15px !important;
+                        top: 8px !important;
+                        right: 12px !important;
                     }
                     header > div:last-child button {
-                        padding: 6px 12px !important;
-                        font-size: 12px !important;
+                        padding: 5px 10px !important;
+                        font-size: 11px !important;
+                        border-radius: 15px !important;
                     }
                 }
             `}</style>

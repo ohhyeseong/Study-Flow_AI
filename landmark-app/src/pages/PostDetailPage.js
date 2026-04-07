@@ -130,10 +130,10 @@ const PostDetailPage = () => {
                         </div>
                     ) : (
                         <>
-                            <div style={styles.postHeader}>
-                                <h2 style={styles.postTitle}>{post.title}</h2>
+                            <div style={styles.postHeader} className="post-detail-header">
+                                <h2 style={styles.postTitle} className="post-detail-title">{post.title}</h2>
                                 {currentUsername === post.authorUsername && (
-                                    <div style={styles.actionGroup}>
+                                    <div style={styles.actionGroup} className="post-detail-actions">
                                         <button onClick={() => setIsEditingPost(true)} style={styles.textBtn}>수정</button>
                                         <button onClick={handleDeletePost} style={{ ...styles.textBtn, color: '#ef4444' }}>삭제</button>
                                     </div>
@@ -145,7 +145,14 @@ const PostDetailPage = () => {
                             </div>
                             <hr style={styles.hr} />
                             <div style={styles.postBody}>
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                <ReactMarkdown 
+                                    remarkPlugins={[remarkGfm]}
+                                    components={{
+                                        img: ({node, ...props}) => (
+                                            <img {...props} style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px', marginTop: '10px' }} alt="" />
+                                        )
+                                    }}
+                                >
                                     {post.content.replace(/\n/g, '  \n')}
                                 </ReactMarkdown>
                             </div>
@@ -167,7 +174,7 @@ const PostDetailPage = () => {
                     )}
                 </div>
 
-                <div style={styles.commentSection}>
+                <div style={styles.commentSection} className="post-detail-comments">
                     <h3 style={styles.commentCount}>💬 댓글 {comments.length}개</h3>
                     <form onSubmit={handleCommentSubmit} style={styles.commentForm}>
                         <textarea value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글을 입력하세요" style={styles.commentInput} />
@@ -237,12 +244,23 @@ const PostDetailPage = () => {
                     </div>
                 </div>
             </div>
+            <style>{`
+                @media screen and (max-width: 768px) {
+                    .post-detail-header { flex-direction: column !important; align-items: flex-start !important; gap: 10px !important; }
+                    .post-detail-title { font-size: 22px !important; }
+                    .post-detail-actions { align-self: flex-end !important; }
+                    div[style*="padding: '40px'"] { padding: 25px 20px !important; border-radius: 0 !important; border-left: none !important; border-right: none !important; }
+                    .post-detail-comments { padding-left: 15px !important; padding-right: 15px !important; }
+                    div[style*="marginLeft: '40px'"] { margin-left: 15px !important; }
+                    .post-detail-reactions { margin-top: 30px !important; }
+                }
+            `}</style>
         </div>
     );
 };
 
 const styles = {
-    layout: { width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f8fafc', overflow: 'hidden' },
+    layout: { width: '100vw', minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f8fafc', overflowX: 'hidden' },
     content: { flex: 1, maxWidth: '800px', margin: '0 auto', padding: '40px 20px', width: '100%', overflowY: 'auto' },
     postCard: { backgroundColor: '#fff', padding: '40px', borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' },
     postHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' },

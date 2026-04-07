@@ -52,7 +52,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String username = claims.getSubject();
 
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    // 💡 다시 DB에서 CustomUserDetails를 가져옵니다!
+                    // 사용자 정보 재조회
                     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
                     if (!userDetails.isAccountNonLocked()) {

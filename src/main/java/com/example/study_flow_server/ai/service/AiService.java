@@ -7,6 +7,7 @@ import com.example.study_flow_server.ai.entity.SolveStatus;
 import com.example.study_flow_server.ai.repository.AiHistoryRepository;
 import com.example.study_flow_server.ai.repository.QuizResultRepository;
 import com.example.study_flow_server.user.domain.User;
+import com.example.study_flow_server.user.service.S3Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
@@ -34,6 +35,7 @@ public class AiService {
     private final AiHistoryRepository aiHistoryRepository;
     private final AiDatabaseService aiDatabaseService;
     private final QuizResultRepository quizResultRepository;
+    private final S3Service s3Service;
 
     @Transactional
     @Cacheable(value = "aiAnalysis", key = "(#prompt != null ? #prompt : 'no_prompt') + (#file != null ? #file.getOriginalFilename() : 'no_file')")
@@ -47,7 +49,9 @@ public class AiService {
             builder.part("prompt", prompt);
         }
 
+        String s3Url = null;
         if (file != null && !file.isEmpty()) {
+            s3Url = s3Service.uploadFile(file);
             try {
                 builder.part("file", new ByteArrayResource(file.getBytes()))
                         .filename(file.getOriginalFilename())
@@ -70,6 +74,7 @@ public class AiService {
 
         if (responseDto != null) {
             responseDto = responseDto.withResponseTime(totalTime);
+            responseDto = responseDto.withS3Url(s3Url);
             responseDto = aiDatabaseService.saveAnalysisResult(user, prompt, responseDto);
         }
 

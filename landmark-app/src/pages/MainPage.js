@@ -117,39 +117,50 @@ const MainPage = () => {
 
                 @media screen and (max-width: 768px) {
                     .top-nav-mobile {
-                        padding: 15px 20px !important;
+                        padding: 10px 15px !important;
+                        gap: 8px !important;
+                    }
+                    .top-nav-mobile button {
+                        font-size: 13px !important;
+                        padding: 6px 12px !important;
                     }
                     .main-content-mobile {
-                        padding: 10px 20px 60px 20px !important;
+                        padding: 10px 16px 40px 16px !important;
                     }
-                    .hero-title-mobile { font-size: 28px !important; }
-                    .hero-subtitle-mobile { font-size: 15px !important; margin-bottom: 30px !important; word-break: keep-all; }
+                    .hero-title-mobile { 
+                        font-size: 26px !important; 
+                        margin-top: 10px !important;
+                        white-space: normal !important;
+                    }
+                    .hero-subtitle-mobile { font-size: 14px !important; margin-bottom: 25px !important; word-break: keep-all; }
 
                     .menu-grid-mobile {
                         display: flex !important;
                         flex-direction: column !important;
-                        gap: 16px !important;
+                        gap: 12px !important;
                     }
                     .menu-card-mobile {
-                        padding: 20px !important;
+                        padding: 16px !important;
                         display: flex !important;
                         flex-direction: row !important;
                         align-items: center !important;
-                        gap: 16px !important;
+                        gap: 12px !important;
                         text-align: left !important;
                         width: 100% !important;
                         box-sizing: border-box !important;
-                        box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important;
+                        box-shadow: 0 4px 10px rgba(0,0,0,0.04) !important;
+                        border-radius: 20px !important;
                     }
                     .menu-card-mobile .cardIcon {
-                        width: 56px !important;
-                        height: 56px !important;
-                        font-size: 28px !important;
+                        width: 48px !important;
+                        height: 48px !important;
+                        font-size: 24px !important;
                         margin-bottom: 0 !important;
                         flex-shrink: 0;
+                        border-radius: 16px !important;
                     }
-                    .menu-card-mobile h3 { font-size: 17px !important; margin-top: 0 !important; margin-bottom: 4px !important; }
-                    .menu-card-mobile p { font-size: 13px !important; margin: 0 !important; }
+                    .menu-card-mobile h3 { font-size: 16px !important; margin-top: 0 !important; margin-bottom: 2px !important; }
+                    .menu-card-mobile p { font-size: 12px !important; margin: 0 !important; }
                 }
             `}</style>
         </div>
@@ -157,8 +168,8 @@ const MainPage = () => {
 };
 
 const styles = {
-    layout: { width: '100vw', height: '100dvh', display: 'flex', flexDirection: 'column', backgroundColor: '#f8fafc', overflow: 'hidden' },
-    topNav: { width: '100%', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '20px 40px', boxSizing: 'border-box', gap: '12px' },
+    layout: { width: '100vw', minHeight: '100vh', minHeight: '100dvh', display: 'flex', flexDirection: 'column', backgroundColor: '#f8fafc', overflowX: 'hidden' },
+    topNav: { width: '100%', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '20px 40px', boxSizing: 'border-box', gap: '12px', flexShrink: 0 },
     authBtn: { background: 'transparent', border: 'none', fontSize: '14px', fontWeight: '600', color: '#64748b', cursor: 'pointer', padding: '8px 12px', transition: 'color 0.2s' },
     authBtnPrimary: { background: '#4f46e5', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', color: '#ffffff', cursor: 'pointer', padding: '8px 16px', transition: 'background 0.2s', boxShadow: '0 2px 4px rgba(79, 70, 229, 0.2)' },
     authBtnAdmin: { background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', fontWeight: '600', color: '#1e293b', cursor: 'pointer', padding: '8px 16px', transition: 'all 0.2s' },

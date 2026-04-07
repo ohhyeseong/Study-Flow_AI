@@ -8,7 +8,6 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_ollama import OllamaEmbeddings
 
-# 1. 만든 config 파일에서 설정값들을 가져온다.
 from .config import settings
 
 class AIService:
@@ -27,7 +26,7 @@ class AIService:
         )
 
         self.system_instruction = (
-            "당신은 프로그래밍 튜터입니다. 한국어로 답변하고 마지막에 반드시 ###QUIZ### 형식을 지키세요.\n"
+            "당신은 일타 강사입니다. 물어본건 무조건 한국어로 답변하고, 이해가 쉽게 설명을 해주세요. 그리고 마지막에 반드시 ###QUIZ### 형식을 지키세요.\n"
             "형식: ###QUIZ### {\"question\": \"...\", \"options\": [\"...\", \"...\", \"...\", \"...\"], \"answer\": \"...\", \"explanation\": \"...\"} ###QUIZ###"
         )
 

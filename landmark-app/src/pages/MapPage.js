@@ -17,9 +17,9 @@ function MapPage() {
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [showAiModal, setShowAiModal] = useState(false);
 
-  const navigate = useNavigate();
-
   useEffect(() => {
+    if (!window.kakao || !window.kakao.maps) return;
+
     const container = document.getElementById('map');
     const options = {
       center: new window.kakao.maps.LatLng(currentPos.lat, currentPos.lon),
@@ -39,9 +39,11 @@ function MapPage() {
           position: myLoc,
           title: "내 위치"
         });
+        kakaoMap.relayout();
       });
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 초기화 1회만 실시
 
   const clearMarkers = () => {
     markers.forEach(m => m.setMap(null));
@@ -98,7 +100,7 @@ function MapPage() {
       }
       setIsLoading(false);
     }, { location: new window.kakao.maps.LatLng(currentPos.lat, currentPos.lon), radius: 2000 });
-  }, [customPrompt, currentPos, isLoading, mapObj, markers]);
+  }, [customPrompt, currentPos, isLoading, mapObj, clearMarkers]);
 
   const fetchAndShowSavedLandmarks = async () => {
     try {
@@ -135,7 +137,7 @@ function MapPage() {
     <div style={styles.layout}>
       <Header />
       <div style={styles.mapContainer}>
-        <div style={styles.floatingSearch}>
+        <div style={styles.floatingSearch} className="map-floating-search">
           <input
             type="text"
             placeholder="장소나 키워드를 입력하세요"
@@ -144,30 +146,31 @@ function MapPage() {
             style={styles.searchInput}
             onKeyDown={(e) => e.key === 'Enter' && handleSearchAndRecommend(customPrompt)}
           />
-          <div style={styles.btnRow}>
+          <div style={styles.btnRow} className="map-btn-row">
             <button onClick={() => handleSearchAndRecommend("학원")} style={styles.aiBtn}>🎓 학원</button>
             <button onClick={() => handleSearchAndRecommend("스터디카페")} style={styles.aiBtn}>✍️ 스터디카페</button>
-            <button onClick={() => handleSearchAndRecommend("공원")} style={{...styles.aiBtn, backgroundColor: '#34a853'}}>🌳 쉼터</button>
-            <button onClick={fetchAndShowSavedLandmarks} style={styles.listBtn}>📚 내 목록</button>
+            <button onClick={() => handleSearchAndRecommend("공원")} style={{ ...styles.aiBtn, backgroundColor: '#34a853' }}>🌳 쉼터</button>
+            <button onClick={fetchAndShowSavedLandmarks} style={styles.listBtn}>📚 목록</button>
           </div>
         </div>
 
         {showSaved && (
-          <div style={styles.sidebar}>
+          <div style={styles.sidebar} className="map-sidebar">
             <div style={styles.sidebarHeader}>
               <strong>내 스터디 맵</strong>
-              <button onClick={()=>setShowSaved(false)} style={styles.closeX}>✕</button>
+              <button onClick={() => setShowSaved(false)} style={styles.closeX}>✕</button>
             </div>
             <div style={styles.sidebarBody}>
-              {savedLandmarks.length === 0 ? <p style={{fontSize:'12px', textAlign:'center', color:'#999'}}>저장된 장소가 없습니다.</p> :
+              {savedLandmarks.length === 0 ? <p style={{ fontSize: '12px', textAlign: 'center', color: '#999' }}>저장된 장소가 없습니다.</p> :
                 savedLandmarks.map(place => (
                   <div key={place.id} style={styles.listItem} onClick={() => {
                     const moveLatLng = new window.kakao.maps.LatLng(place.latitude, place.longitude);
                     mapObj.panTo(moveLatLng);
-                    setSelectedPlace({...place, type: 'saved'});
+                    setSelectedPlace({ ...place, type: 'saved' });
+                    if (window.innerWidth <= 768) setShowSaved(false); // 모바일에서는 목록 이동 후 닫기
                   }}>
-                    <div style={{fontWeight:'bold', fontSize:'14px'}}>{place.name}</div>
-                    <div style={{fontSize:'12px', color:'#666'}}>{place.description}</div>
+                    <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{place.name}</div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>{place.description}</div>
                   </div>
                 ))
               }
@@ -176,14 +179,14 @@ function MapPage() {
         )}
 
         {selectedPlace && (
-          <div style={styles.resultCard}>
+          <div style={styles.resultCard} className="map-result-card">
             <div style={styles.cardHeader}>{selectedPlace.type === 'saved' ? '📌 저장된 장소' : '📍 검색 결과'}</div>
-            <div style={{margin:'12px 0'}}>
-              <div style={{fontSize:'18px', fontWeight:'bold', color:'#1e293b'}}>{selectedPlace.name}</div>
-              <div style={{fontSize:'13px', color:'#64748b', marginTop:'4px'}}>{selectedPlace.address || selectedPlace.description}</div>
+            <div style={{ margin: '12px 0' }}>
+              <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#1e293b' }}>{selectedPlace.name}</div>
+              <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>{selectedPlace.address || selectedPlace.description}</div>
             </div>
-            <div style={{display:'flex', gap:'8px'}}>
-              <button onClick={() => openKakaoRoute(selectedPlace)} style={styles.routeBtn}>🚗 길안내 시작</button>
+            <div style={{ display: 'flex', gap: '8px' }} className="map-card-btns">
+              <button onClick={() => openKakaoRoute(selectedPlace)} style={styles.routeBtn}>🚗 길안내</button>
               {selectedPlace.type !== 'saved' && (
                 <button onClick={() => handleSaveLocation(selectedPlace)} style={styles.saveBtn}>⭐ 저장</button>
               )}
@@ -196,7 +199,7 @@ function MapPage() {
           <div style={styles.modalOverlay}>
             <div style={styles.modalContent}>
               <div style={styles.modalHeader}>
-                <h3 style={{margin:0}}>🤖 AI 추천 가이드</h3>
+                <h3 style={{ margin: 0 }}>🤖 AI 추천 가이드</h3>
                 <button onClick={() => setShowAiModal(false)} style={styles.closeX}>✕</button>
               </div>
               <div style={styles.modalBody}>
@@ -209,21 +212,46 @@ function MapPage() {
           </div>
         )}
 
-        <div id="map" style={{ width: '100%', height: '100%' }}></div>
+        <div id="map" style={{ width: '100%', height: '100%', touchAction: 'none' }}></div>
       </div>
+      <style>{`
+        @media screen and (max-width: 768px) {
+          .map-floating-search { top: 10px !important; width: 95% !important; }
+          .map-btn-row { flex-wrap: wrap !important; gap: 5px !important; }
+          .map-btn-row button { padding: 8px 12px !important; font-size: 12px !important; flex: 1; min-width: 80px; }
+          
+          .map-sidebar { 
+            top: auto !important; 
+            bottom: 0 !important; 
+            left: 0 !important; 
+            right: 0 !important; 
+            width: 100% !important; 
+            border-radius: 24px 24px 0 0 !important; 
+            max-height: 50vh !important;
+            padding: 24px 20px !important;
+          }
+          
+          .map-result-card {
+            bottom: 10px !important;
+            width: 95% !important;
+            padding: 20px !important;
+          }
+          .map-card-btns button { padding: 10px 5px !important; font-size: 13px !important; }
+        }
+      `}</style>
     </div>
   );
 }
 
 const styles = {
-  layout: { width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
+  layout: { width: '100vw', height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
   mapContainer: { flex: 1, position: 'relative' },
   floatingSearch: { position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 100, width: '90%', maxWidth: '650px', display: 'flex', flexDirection: 'column', gap: '10px' },
   searchInput: { padding: '15px 25px', borderRadius: '30px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', outline: 'none', fontSize: '15px' },
   btnRow: { display: 'flex', gap: '8px', justifyContent: 'center' },
   aiBtn: { padding: '10px 20px', backgroundColor: '#4285F4', color: '#fff', border: 'none', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' },
   listBtn: { padding: '10px 20px', backgroundColor: '#334155', color: '#fff', border: 'none', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' },
-  sidebar: { position: 'absolute', top: '150px', right: '20px', zIndex: 1001, width: '280px', backgroundColor: '#fff', borderRadius: '24px', padding: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', maxHeight: '60vh', display:'flex', flexDirection:'column' },
+  sidebar: { position: 'absolute', top: '150px', right: '20px', zIndex: 1001, width: '280px', backgroundColor: '#fff', borderRadius: '24px', padding: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', maxHeight: '60vh', display: 'flex', flexDirection: 'column' },
   sidebarHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' },
   sidebarBody: { overflowY: 'auto', flex: 1 },
   listItem: { padding: '14px', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.2s' },
@@ -236,7 +264,7 @@ const styles = {
   modalOverlay: { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000 },
   modalContent: { backgroundColor: '#fff', width: '90%', maxWidth: '500px', borderRadius: '28px', overflow: 'hidden' },
   modalHeader: { padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  modalBody: { padding: '24px', maxHeight: '50vh', overflowY: 'auto', fontSize:'15px' },
+  modalBody: { padding: '24px', maxHeight: '50vh', overflowY: 'auto', fontSize: '15px' },
   modalFooter: { padding: '15px 24px', borderTop: '1px solid #f1f5f9', textAlign: 'right' },
   confirmBtn: { padding: '12px 25px', backgroundColor: '#4285F4', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }
 };

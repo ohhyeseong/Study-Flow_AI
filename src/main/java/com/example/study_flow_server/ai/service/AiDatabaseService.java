@@ -26,11 +26,10 @@ public class AiDatabaseService {
                 .user(user)
                 .userPrompt(prompt)
                 .aiResponse(response.description())
-                .imageUrl(response.filename())
+                .imageUrl(response.s3Url())
                 .build();
 
         AiHistory savedHistory = aiHistoryRepository.save(history);
-        log.info(">>> AiHistory 저장 완료: {}", savedHistory.getId());
 
         if (response.hasQuiz()) {
             try {
@@ -45,29 +44,16 @@ public class AiDatabaseService {
                         .build();
 
                 Quiz savedQuiz = quizRepository.save(quiz);
-                log.info(">>> Quiz 저장 완료: ID {}", savedQuiz.getId());
 
-                // 저장된 ID와 해설을 포함한 DTO 생성
                 AiQuizDto updatedQuizDto = new AiQuizDto(
                         savedQuiz.getId(),
                         originalQuizDto.question(),
                         originalQuizDto.options(),
                         originalQuizDto.answer(),
-                        originalQuizDto.explanation() // 해설 유지
-                );
+                        originalQuizDto.explanation());
 
-                return new AiResponseDto(
-                        response.filename(),
-                        response.userPrompt(),
-                        response.mode(),
-                        response.extractedText(),
-                        response.description(),
-                        updatedQuizDto,
-                        response.dbStatus(),
-                        response.responseTime());
-
+                return response.withQuizDto(updatedQuizDto);
             } catch (Exception e) {
-                log.error("!!! Quiz 저장 실패: {}", e.getMessage());
                 throw new RuntimeException("Quiz 저장에 실패했습니다.", e);
             }
         }

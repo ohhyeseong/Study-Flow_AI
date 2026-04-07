@@ -133,8 +133,8 @@ class AiServiceTest {
         MockMultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", "test image".getBytes());
         String prompt = "이 이미지는 무엇인가요?";
 
-        // AiResponseDto record 인자 순서: filename, userPrompt, mode, extractedText, description, quizDto, dbStatus, responseTime
-        AiResponseDto mockResponse = new AiResponseDto("test.jpg", prompt, null, null, "테스트 응답", null, "Saved", 0.0);
+        AiResponseDto mockResponse = new AiResponseDto("test.jpg", prompt, null, null, "테스트 응답", null, "Saved", 0.0,
+                null);
 
         given(responseSpec.bodyToMono(AiResponseDto.class)).willReturn(Mono.just(mockResponse));
 
@@ -159,9 +159,7 @@ class AiServiceTest {
                         "Internal Server Error",
                         null,
                         new byte[0],
-                        null
-                )
-        );
+                        null));
 
         CustomException exception = assertThrows(CustomException.class, () -> {
             aiService.analyzeImage(user, file, prompt);

@@ -27,14 +27,15 @@ const BoardPage = () => {
         <div style={styles.layout}>
             <Header />
             <div style={styles.content}>
-                <div style={styles.headerArea}>
+                <div style={styles.headerArea} className="board-header">
                     <div>
-                        <h2 style={styles.title}>📋 커뮤니티 게시판</h2>
-                        <p style={styles.subtitle}>함께 공부하는 동료들과 지식을 공유해보세요.</p>
+                        <h2 style={styles.title} className="board-title">📋 커뮤니티 게시판</h2>
+                        <p style={styles.subtitle} className="board-subtitle">함께 공부하는 동료들과 지식을 공유해보세요.</p>
                     </div>
                     <button
                         onClick={() => navigate('/post/write')}
                         style={styles.writeBtn}
+                        className="board-write-btn"
                     >
                         ✍️ 글쓰기
                     </button>
@@ -87,6 +88,23 @@ const BoardPage = () => {
                     </div>
                 )}
             </div>
+            <style>{`
+                @media screen and (max-width: 768px) {
+                    .board-header { 
+                        flex-direction: column !important; 
+                        align-items: flex-start !important; 
+                        gap: 15px !important;
+                    }
+                    .board-title { font-size: 22px !important; }
+                    .board-subtitle { font-size: 13px !important; }
+                    .board-write-btn { width: 100% !important; padding: 10px !important; }
+                    
+                    div[style*="gridTemplateColumns"] {
+                        grid-template-columns: 1fr !important;
+                        gap: 16px !important;
+                    }
+                }
+            `}</style>
         </div>
     );
 };

@@ -18,7 +18,8 @@ public record AiResponseDto(
         @JsonProperty("description") String description,
         @JsonProperty("quiz_dto") AiQuizDto quizDto,
         @JsonProperty("db_status") String dbStatus,
-        @JsonProperty("response_time") Double responseTime
+        @JsonProperty("response_time") Double responseTime,
+        @JsonProperty("s3_url") String s3Url
 ) implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -58,13 +59,26 @@ public record AiResponseDto(
                 parsedDescription,
                 parsedQuizDto,
                 dbStatus,
-                0.0
+                0.0,
+                null
+        );
+    }
+
+    public AiResponseDto withS3Url(String url) {
+        return new AiResponseDto(
+                filename, userPrompt, mode, extractedText, description, quizDto, dbStatus, responseTime, url
         );
     }
 
     public AiResponseDto withResponseTime(Double time) {
         return new AiResponseDto(
-                filename, userPrompt, mode, extractedText, description, quizDto, dbStatus, time
+                filename, userPrompt, mode, extractedText, description, quizDto, dbStatus, time, s3Url
+        );
+    }
+
+    public AiResponseDto withQuizDto(AiQuizDto updatedQuizDto) {
+        return new AiResponseDto(
+                filename, userPrompt, mode, extractedText, description, updatedQuizDto, dbStatus, responseTime, s3Url
         );
     }
 

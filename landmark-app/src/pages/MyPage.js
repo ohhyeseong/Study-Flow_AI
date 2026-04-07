@@ -6,17 +6,17 @@ import Header from '../components/Header';
 const MyPage = () => {
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
-    const [activeTab, setActiveTab] = useState('info'); // info, posts, likes
+    const [activeTab, setActiveTab] = useState('info');
     const [myPosts, setMyPosts] = useState([]);
     const [likedPosts, setLikedPosts] = useState([]);
 
-    // Edit states
+
     const [isEditingNick, setIsEditingNick] = useState(false);
     const [editNickname, setEditNickname] = useState('');
     const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
     const [uploading, setUploading] = useState(false);
 
-    // List of predefined avatars (using dicebear as placeholder)
+
     const predefinedAvatars = [
         "https://api.dicebear.com/7.x/fun-emoji/svg?seed=Felix",
         "https://api.dicebear.com/7.x/fun-emoji/svg?seed=Aneka",
@@ -103,7 +103,7 @@ const MyPage = () => {
         const file = event.target.files[0];
         if (!file) return;
 
-        // Check file type
+
         if (!file.type.startsWith('image/')) {
             alert('이미지 파일만 업로드 가능합니다.');
             return;
@@ -137,10 +137,10 @@ const MyPage = () => {
     return (
         <div style={styles.layout}>
             <Header />
-            <div style={styles.container}>
-                <div style={styles.sidebar}>
-                    <h2 style={styles.sidebarTitle}>마이 페이지</h2>
-                    <ul style={styles.menuList}>
+            <div style={styles.container} className="mypage-container">
+                <div style={styles.sidebar} className="mypage-sidebar">
+                    <h2 style={styles.sidebarTitle} className="mypage-sidebar-title">마이 페이지</h2>
+                    <ul style={styles.menuList} className="mypage-menu-list">
                         <li style={activeTab === 'info' ? styles.activeMenu : styles.menuItem} onClick={() => setActiveTab('info')}>
                             👤 내 정보
                         </li>
@@ -153,44 +153,45 @@ const MyPage = () => {
                     </ul>
                 </div>
 
-                <div style={styles.content}>
+                <div style={styles.content} className="mypage-content">
                     {activeTab === 'info' && (
                         <div style={styles.infoSection}>
                             <h3 style={styles.sectionTitle}>내 프로필</h3>
-                            <div style={styles.profileCard}>
+                            <div style={styles.profileCard} className="mypage-profile-card">
                                 <div style={styles.avatarWrapper}>
-                                    <img 
-                                        src={user.profileImageUrl || defaultProfile} 
-                                        alt="Profile" 
+                                    <img
+                                        src={user.profileImageUrl || defaultProfile}
+                                        alt="Profile"
                                         style={styles.avatarImg}
                                     />
                                     <button style={styles.avatarEditBtn} onClick={() => setIsAvatarModalOpen(true)}>
                                         ✏️ 변경
                                     </button>
                                 </div>
-                                <div style={styles.infoDetails}>
-                                    <div style={styles.infoRow}>
-                                        <span style={styles.infoLabel}>아이디:</span>
+                                <div style={styles.infoDetails} className="mypage-info-details">
+                                    <div style={styles.infoRow} className="mypage-info-row">
+                                        <span style={styles.infoLabel} className="mypage-info-label">아이디:</span>
                                         <span style={styles.infoValue}>{user.username}</span>
                                     </div>
-                                    <div style={styles.infoRow}>
-                                        <span style={styles.infoLabel}>이메일:</span>
+                                    <div style={styles.infoRow} className="mypage-info-row">
+                                        <span style={styles.infoLabel} className="mypage-info-label">이메일:</span>
                                         <span style={styles.infoValue}>{user.email}</span>
                                     </div>
-                                    <div style={styles.infoRow}>
-                                        <span style={styles.infoLabel}>닉네임:</span>
+                                    <div style={styles.infoRow} className="mypage-info-row">
+                                        <span style={styles.infoLabel} className="mypage-info-label">닉네임:</span>
                                         {isEditingNick ? (
-                                            <div style={{display: 'flex', gap: '8px'}}>
-                                                <input 
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <input
                                                     value={editNickname}
                                                     onChange={e => setEditNickname(e.target.value)}
                                                     style={styles.nickInput}
+                                                    className="mypage-nick-input"
                                                 />
                                                 <button onClick={handleSaveNickname} style={styles.saveBtn}>저장</button>
                                                 <button onClick={() => { setIsEditingNick(false); setEditNickname(user.nickname); }} style={styles.cancelBtn}>취소</button>
                                             </div>
                                         ) : (
-                                            <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                                 <span style={styles.infoValue}>{user.nickname}</span>
                                                 <button onClick={() => setIsEditingNick(true)} style={styles.editBtn}>수정</button>
                                             </div>
@@ -252,10 +253,10 @@ const MyPage = () => {
             {isAvatarModalOpen && (
                 <div style={styles.modalOverlay}>
                     <div style={styles.modalContent}>
-                        <h3 style={{margin: '0 0 20px 0'}}>프로필 아바타 선택</h3>
+                        <h3 style={{ margin: '0 0 20px 0' }}>프로필 아바타 선택</h3>
                         <div style={styles.avatarGrid}>
                             {predefinedAvatars.map((url, idx) => (
-                                <img 
+                                <img
                                     key={idx}
                                     src={url}
                                     alt="Avatar option"
@@ -272,13 +273,13 @@ const MyPage = () => {
                                 <span style={styles.dividerText}>또는 직접 업로드</span>
                                 <div style={styles.line}></div>
                             </div>
-                            
+
                             <label style={uploading ? styles.uploadBtnDisabled : styles.uploadBtn}>
                                 {uploading ? '업로드 중...' : '📁 내 PC에서 사진 선택'}
-                                <input 
-                                    type="file" 
-                                    accept="image/*" 
-                                    onChange={handleFileUpload} 
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleFileUpload}
                                     style={{ display: 'none' }}
                                     disabled={uploading}
                                 />
@@ -295,37 +296,86 @@ const MyPage = () => {
                     `}</style>
                 </div>
             )}
+            <style>{`
+                @media screen and (max-width: 768px) {
+                    .mypage-container {
+                        flex-direction: column !important;
+                        margin: 0 !important;
+                        width: 100% !important;
+                        border-radius: 0 !important;
+                        gap: 0 !important;
+                        box-shadow: none !important;
+                    }
+                    .mypage-sidebar {
+                        width: 100% !important;
+                        padding: 15px 20px !important;
+                        border-right: none !important;
+                        border-bottom: 1px solid #f1f5f9 !important;
+                        background-color: #fff !important;
+                    }
+                    .mypage-sidebar-title {
+                        display: none !important;
+                    }
+                    .mypage-menu-list {
+                        flex-direction: row !important;
+                        justify-content: space-around !important;
+                        gap: 5px !important;
+                    }
+                    .mypage-content {
+                        padding: 20px 15px !important;
+                    }
+                    .mypage-profile-card {
+                        flex-direction: column !important;
+                        gap: 25px !important;
+                        padding: 20px !important;
+                        align-items: center !important;
+                        text-align: center !important;
+                    }
+                    .mypage-info-row {
+                        flex-direction: column !important;
+                        align-items: center !important;
+                        gap: 8px !important;
+                    }
+                    .mypage-info-label {
+                        width: auto !important;
+                        margin-bottom: 2px !important;
+                    }
+                    .mypage-nick-input {
+                        font-size: 16px !important; /* iOS zoom 방지 */
+                    }
+                }
+            `}</style>
         </div>
     );
 };
 
 const styles = {
-    layout: { width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f8fafc', overflow: 'hidden' },
+    layout: { width: '100%', minHeight: '100dvh', display: 'flex', flexDirection: 'column', backgroundColor: '#f8fafc', overflowX: 'hidden' },
     loading: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontSize: '18px', color: '#64748b' },
-    container: { display: 'flex', flex: 1, maxWidth: '1000px', margin: '30px auto', width: '90%', gap: '30px', backgroundColor: '#fff', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', overflow: 'hidden' },
-    
-    sidebar: { width: '220px', padding: '30px 20px', borderRight: '1px solid #f1f5f9', backgroundColor: '#fafafb' },
+    container: { display: 'flex', flex: 1, maxWidth: '1000px', margin: '30px auto', width: '95%', gap: '30px', backgroundColor: '#fff', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', overflow: 'hidden' },
+
+    sidebar: { width: '220px', padding: '30px 20px', borderRight: '1px solid #f1f5f9', backgroundColor: '#fafafb', flexShrink: 0 },
     sidebarTitle: { margin: '0 0 30px 0', fontSize: '20px', fontWeight: '800', color: '#1e293b' },
     menuList: { listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' },
-    menuItem: { padding: '12px 16px', borderRadius: '12px', fontSize: '15px', fontWeight: '600', color: '#64748b', cursor: 'pointer', transition: 'all 0.2s' },
-    activeMenu: { padding: '12px 16px', borderRadius: '12px', fontSize: '15px', fontWeight: '700', color: '#4f46e5', backgroundColor: '#e0e7ff', cursor: 'pointer' },
-    
+    menuItem: { padding: '12px 16px', borderRadius: '12px', fontSize: '14px', fontWeight: '600', color: '#64748b', cursor: 'pointer', transition: 'all 0.2s', textAlign: 'center' },
+    activeMenu: { padding: '12px 16px', borderRadius: '12px', fontSize: '14px', fontWeight: '700', color: '#4f46e5', backgroundColor: '#e0e7ff', cursor: 'pointer', textAlign: 'center' },
+
     content: { flex: 1, padding: '40px 30px', overflowY: 'auto' },
-    sectionTitle: { margin: '0 0 25px 0', fontSize: '24px', fontWeight: '800', color: '#1e293b' },
+    sectionTitle: { margin: '0 0 25px 0', fontSize: '22px', fontWeight: '800', color: '#1e293b' },
     infoSection: { display: 'flex', flexDirection: 'column' },
     profileCard: { display: 'flex', gap: '40px', padding: '30px', border: '1px solid #e2e8f0', borderRadius: '16px', backgroundColor: '#fff' },
-    avatarWrapper: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' },
-    avatarImg: { width: '120px', height: '120px', borderRadius: '60px', backgroundColor: '#f1f5f9', objectFit: 'cover' },
-    avatarEditBtn: { padding: '8px 16px', borderRadius: '20px', border: 'none', backgroundColor: '#f1f5f9', color: '#475569', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
-    infoDetails: { display: 'flex', flexDirection: 'column', gap: '20px', justifyContent: 'center' },
+    avatarWrapper: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px', flexShrink: 0 },
+    avatarImg: { width: '100px', height: '100px', borderRadius: '50px', backgroundColor: '#f1f5f9', objectFit: 'cover' },
+    avatarEditBtn: { padding: '6px 14px', borderRadius: '20px', border: 'none', backgroundColor: '#f1f5f9', color: '#475569', fontSize: '12px', fontWeight: '700', cursor: 'pointer' },
+    infoDetails: { display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'center' },
     infoRow: { display: 'flex', alignItems: 'center' },
-    infoLabel: { width: '80px', color: '#64748b', fontSize: '15px', fontWeight: '600' },
-    infoValue: { color: '#1e293b', fontSize: '16px', fontWeight: '500' },
-    nickInput: { padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', outline: 'none' },
-    saveBtn: { padding: '8px 16px', border: 'none', borderRadius: '8px', backgroundColor: '#4f46e5', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
-    cancelBtn: { padding: '8px 16px', border: '1px solid #e2e8f0', borderRadius: '8px', backgroundColor: '#fff', color: '#64748b', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
-    editBtn: { padding: '4px 10px', border: '1px solid #e2e8f0', borderRadius: '6px', backgroundColor: '#f8fafc', color: '#475569', fontSize: '12px', cursor: 'pointer' },
-    
+    infoLabel: { width: '80px', color: '#64748b', fontSize: '14px', fontWeight: '600' },
+    infoValue: { color: '#1e293b', fontSize: '15px', fontWeight: '500' },
+    nickInput: { padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '15px', outline: 'none' },
+    saveBtn: { padding: '8px 16px', border: 'none', borderRadius: '8px', backgroundColor: '#4f46e5', color: '#fff', fontSize: '13px', fontWeight: '700', cursor: 'pointer' },
+    cancelBtn: { padding: '8px 16px', border: '1px solid #e2e8f0', borderRadius: '8px', backgroundColor: '#fff', color: '#64748b', fontSize: '13px', fontWeight: '700', cursor: 'pointer' },
+    editBtn: { padding: '4px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', backgroundColor: '#f8fafc', color: '#475569', fontSize: '12px', cursor: 'pointer', fontWeight: '700' },
+
     postsSection: { display: 'flex', flexDirection: 'column' },
     emptyText: { color: '#94a3b8', fontSize: '15px' },
     postList: { display: 'flex', flexDirection: 'column', gap: '16px' },

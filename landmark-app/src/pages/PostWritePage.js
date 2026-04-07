@@ -67,9 +67,9 @@ const PostWritePage = () => {
             <Header />
             <div style={styles.content}>
                 <div style={styles.formContainer}>
-                    <div style={styles.headerArea}>
-                        <h2 style={styles.title}>✍️ 새 글 작성하기</h2>
-                        <p style={styles.subtitle}>학습 질문이나 지식을 자유롭게 공유해보세요.</p>
+                    <div style={styles.headerArea} className="post-write-header">
+                        <h2 style={styles.title} className="post-write-title">✍️ 새 글 작성하기</h2>
+                        <p style={styles.subtitle} className="post-write-subtitle">학습 질문이나 지식을 자유롭게 공유해보세요.</p>
                     </div>
 
                     <form onSubmit={handleSubmit} style={styles.form}>
@@ -131,7 +131,14 @@ const PostWritePage = () => {
                                 ) : (
                                     <div style={styles.previewContainer}>
                                         <div style={styles.previewContent}>
-                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                            <ReactMarkdown 
+                                                remarkPlugins={[remarkGfm]}
+                                                components={{
+                                                    img: ({node, ...props}) => (
+                                                        <img {...props} style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px', marginTop: '10px' }} alt="" />
+                                                    )
+                                                }}
+                                            >
                                                 {content ? content.replace(/\n/g, '  \n') : "*내용을 입력하면 여기에 미리보기가 표시됩니다.*"}
                                             </ReactMarkdown>
                                         </div>
@@ -140,11 +147,12 @@ const PostWritePage = () => {
                             </div>
                         </div>
 
-                        <div style={styles.btnGroup}>
+                        <div style={styles.btnGroup} className="post-write-btns">
                             <button
                                 type="button"
                                 onClick={() => navigate('/board')}
                                 style={styles.cancelBtn}
+                                className="post-write-cancel"
                             >
                                 취소
                             </button>
@@ -152,6 +160,7 @@ const PostWritePage = () => {
                                 type="submit"
                                 disabled={submitting}
                                 style={styles.submitBtn}
+                                className="post-write-submit"
                             >
                                 {submitting ? "등록 중..." : "등록하기"}
                             </button>
@@ -159,6 +168,39 @@ const PostWritePage = () => {
                     </form>
                 </div>
             </div>
+            <style>{`
+                @media screen and (max-width: 768px) {
+                    .post-write-header { margin-bottom: 20px !important; }
+                    .post-write-title { font-size: 20px !important; }
+                    .post-write-subtitle { font-size: 13px !important; }
+                    
+                    div[style*="padding: '40px'"] { 
+                        padding: 25px 15px !important; 
+                        border-radius: 0 !important; 
+                        border: none !important; 
+                        box-shadow: none !important;
+                    }
+                    
+                    .post-write-btns {
+                        position: fixed !important;
+                        bottom: 0 !important;
+                        left: 0 !important;
+                        right: 0 !important;
+                        background: #fff !important;
+                        padding: 15px 20px !important;
+                        box-shadow: 0 -4px 12px rgba(0,0,0,0.05) !important;
+                        margin-top: 0 !important;
+                        z-index: 100 !important;
+                    }
+                    .post-write-cancel { flex: 1 !important; }
+                    .post-write-submit { flex: 2 !important; }
+                    
+                    textarea[style*="minHeight: '400px'"] {
+                        min-height: 300px !important;
+                        font-size: 16px !important;
+                    }
+                }
+            `}</style>
         </div>
     );
 };
