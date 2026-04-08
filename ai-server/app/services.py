@@ -32,8 +32,13 @@ class AIService:
             "형식: ###QUIZ### {\"question\": \"...\", \"options\": [\"...\", \"...\", \"...\", \"...\"], \"answer\": \"...\", \"explanation\": \"...\"} ###QUIZ###"
         )
 
-        self.primary_model = "claude-3-5-sonnet-latest"
-        self.fallback_model = "claude-3-haiku-latest"
+        self.primary_model = "claude-sonnet-4-6"
+        self.fallback_model = "claude-haiku-4-5-20251001"
+
+        if settings.ANTHROPIC_API_KEY:
+            print(f"ANTHROPIC_API_KEY 로드됨 (앞 4자리: {settings.ANTHROPIC_API_KEY[:4]}***)")
+        else:
+            print("ERROR: ANTHROPIC_API_KEY가 로드되지 않았습니다!")
 
     @tenacity.retry(
         stop=tenacity.stop_after_attempt(3),
