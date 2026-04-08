@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-    baseURL: process.env.REACT_APP_API_URL || 'http://54.180.155.22:8080',
+    baseURL: process.env.REACT_APP_API_URL || '/api',
 });
 
 apiClient.interceptors.request.use(
