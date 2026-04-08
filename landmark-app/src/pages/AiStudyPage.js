@@ -51,25 +51,29 @@ function AIStudyPage() {
 
     const handleQuizSubmit = async (quizId) => {
         try {
-            const response = await api.post('/quiz/submit', {
+            const response = await apiClient.post('/api/ai/quiz/submit', {
                 quizId: quizId,
                 userAnswer: userAnswer
             });
             alert("제출되었습니다!");
-            setHistory(response.data);
+            setHistory(response.data.data || response.data);
             setCurrentQuiz(null);
             setUserAnswer("");
         } catch (err) { alert("제출 실패"); }
     };
 
     const fetchHistory = async () => {
-        const res = await api.get('/history');
-        setHistory(res.data);
+        try {
+            const res = await apiClient.get('/api/ai/history');
+            setHistory(res.data.data || res.data);
+        } catch (err) { console.error("기록 호출 실패", err); }
     };
 
     const fetchWrongNotes = async () => {
-        const res = await api.get('/notes/wrong');
-        setWrongNotes(res.data);
+        try {
+            const res = await apiClient.get('/api/ai/notes/wrong');
+            setWrongNotes(res.data.data || res.data);
+        } catch (err) { console.error("오답노트 호출 실패", err); }
     };
 
     return (

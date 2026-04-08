@@ -10,6 +10,8 @@ from langchain_ollama import OllamaEmbeddings
 
 from .config import settings
 
+import tenacity
+
 class AIService:
     def __init__(self):
         if not settings.ANTHROPIC_API_KEY:
@@ -28,6 +30,23 @@ class AIService:
         self.system_instruction = (
             "당신은 일타 강사입니다. 물어본건 무조건 한국어로 답변하고, 이해가 쉽게 설명을 해주세요. 그리고 마지막에 반드시 ###QUIZ### 형식을 지키세요.\n"
             "형식: ###QUIZ### {\"question\": \"...\", \"options\": [\"...\", \"...\", \"...\", \"...\"], \"answer\": \"...\", \"explanation\": \"...\"} ###QUIZ###"
+        )
+
+        self.primary_model = "claude-3-5-sonnet-20240620"
+        self.fallback_model = "claude-3-haiku-20240307"
+
+    @tenacity.retry(
+        stop=tenacity.stop_after_attempt(3),
+        wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
+        retry=tenacity.retry_if_exception_type((anthropic.InternalServerError, anthropic.RateLimitError, anthropic.APIStatusError)),
+        before_sleep=lambda retry_state: print(f"AI 과부하 발생. {retry_state.attempt_number}차 재시도 중..."),
+        reraise=True
+    )
+    async def _call_anthropic(self, messages, model):
+        return self.client.messages.create(
+            model=model,
+            max_tokens=1024,
+            messages=messages
         )
 
     async def analyze_content(self, prompt: str, file: Optional[UploadFile] = None) -> dict:
@@ -54,11 +73,13 @@ class AIService:
                     "content": f"{self.system_instruction}\n\n사용자 질문: {prompt}"
                 })
 
-            response = self.client.messages.create(
-                model="claude-sonnet-4-6",
-                max_tokens=1024,
-                messages=messages
-            )
+            # 1차 시도: 메인 모델 (Sonnet)
+            try:
+                response = await self._call_anthropic(messages, self.primary_model)
+            except Exception as e:
+                print(f"메인 모델({self.primary_model}) 실패: {e}. 폴백 모델({self.fallback_model})로 전환합니다.")
+                # 2차 시도: 폴백 모델 (Haiku)
+                response = await self._call_anthropic(messages, self.fallback_model)
 
             ai_response = response.content[0].text if response.content else "No response from AI."
 
