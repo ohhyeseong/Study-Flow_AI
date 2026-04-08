@@ -43,8 +43,8 @@ class AIService:
     @tenacity.retry(
         stop=tenacity.stop_after_attempt(3),
         wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
-        retry=tenacity.retry_if_exception_type((anthropic.InternalServerError, anthropic.RateLimitError)),
-        before_sleep=lambda retry_state: print(f"AI 서비스 일시적 지연(상태 코드: {retry_state.outcome.exception().status_code}). {retry_state.attempt_number}차 재시도 중..."),
+        retry=tenacity.retry_if_exception_type((anthropic.InternalServerError, anthropic.RateLimitError, anthropic.OverloadedError)),
+        before_sleep=lambda retry_state: print(f"AI 서비스 일시적 지연(상태 코드: {retry_state.outcome.exception().status_code if hasattr(retry_state.outcome.exception(), 'status_code') else 'N/A'}). {retry_state.attempt_number}차 재시도 중..."),
         reraise=True
     )
     async def _call_anthropic(self, messages, model):
@@ -88,20 +88,24 @@ class AIService:
 
             ai_response = response.content[0].text if response.content else "No response from AI."
 
-            doc = Document(
-                page_content=f"질문: {prompt}\n답변: {ai_response}",
-                metadata={
-                    "source": source_filename,
-                    "type": "text_or_image_analysis",
-                    "id": str(uuid.uuid4())
-                }
-            )
-            self.vector_store.add_documents([doc])
+            # 벡터 저장소 저장은 선택 사항으로 처리 (Ollama 등이 없어도 응답은 나가도록 함)
+            try:
+                doc = Document(
+                    page_content=f"질문: {prompt}\n답변: {ai_response}",
+                    metadata={
+                        "source": source_filename,
+                        "type": "text_or_image_analysis",
+                        "id": str(uuid.uuid4())
+                    }
+                )
+                self.vector_store.add_documents([doc])
+            except Exception as store_error:
+                print(f"메모리 저장 중 오류 발생 (무시하고 진행): {store_error}")
 
             return {
                 "filename": source_filename,
                 "ai_response": ai_response,
-                "db_status": "Saved to memory"
+                "db_status": "Response generated (Storage failed but response sent)"
             }
         except Exception as e:
             print(f"Error in AIService: {e}")
