@@ -17,10 +17,10 @@ public class S3Service {
 
     private final S3Client s3Client;
 
-    @Value("${cloud.aws.s3.bucket}")
+    @Value("${cloud.aws.s3.bucket:dummy}")
     private String bucket;
 
-    @Value("${cloud.aws.region.static}")
+    @Value("${cloud.aws.region.static:ap-northeast-2}")
     private String region;
 
     public String uploadFile(MultipartFile file) {
