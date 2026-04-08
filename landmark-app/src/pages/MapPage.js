@@ -42,8 +42,7 @@ function MapPage() {
         kakaoMap.relayout();
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 초기화 1회만 실시
+  }, []);
 
   const clearMarkers = () => {
     markers.forEach(m => m.setMap(null));
@@ -75,7 +74,7 @@ function MapPage() {
               category: p.category_name,
               lat: p.y,
               lng: p.x,
-              type: 'new' // 신규 검색 장소
+              type: 'new'
             });
           });
 
