@@ -32,14 +32,14 @@ class AIService:
             "형식: ###QUIZ### {\"question\": \"...\", \"options\": [\"...\", \"...\", \"...\", \"...\"], \"answer\": \"...\", \"explanation\": \"...\"} ###QUIZ###"
         )
 
-        self.primary_model = "claude-3-5-sonnet-20240620"
-        self.fallback_model = "claude-3-haiku-20240307"
+        self.primary_model = "claude-3-5-sonnet-latest"
+        self.fallback_model = "claude-3-haiku-latest"
 
     @tenacity.retry(
         stop=tenacity.stop_after_attempt(3),
         wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
-        retry=tenacity.retry_if_exception_type((anthropic.InternalServerError, anthropic.RateLimitError, anthropic.APIStatusError)),
-        before_sleep=lambda retry_state: print(f"AI 과부하 발생. {retry_state.attempt_number}차 재시도 중..."),
+        retry=tenacity.retry_if_exception_type((anthropic.InternalServerError, anthropic.RateLimitError)),
+        before_sleep=lambda retry_state: print(f"AI 서비스 일시적 지연(상태 코드: {retry_state.outcome.exception().status_code}). {retry_state.attempt_number}차 재시도 중..."),
         reraise=True
     )
     async def _call_anthropic(self, messages, model):
