@@ -22,10 +22,16 @@ public class S3Config {
 
     @Bean
     public S3Client s3Client() {
+        if (accessKey == null || accessKey.trim().isEmpty() || secretKey == null || secretKey.trim().isEmpty()) {
+            accessKey = "dummy-access-key";
+            secretKey = "dummy-secret-key";
+        }
+        
         AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
         return S3Client.builder()
                 .region(Region.of(region))
                 .credentialsProvider(StaticCredentialsProvider.create(credentials))
                 .build();
     }
+
 }
