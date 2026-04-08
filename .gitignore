@@ -5,9 +5,7 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-### Spring Boot ###
-src/main/resources/application.yaml
-src/main/resources/application.yml
+
 ai-server/.env
 src/.env
 .env
