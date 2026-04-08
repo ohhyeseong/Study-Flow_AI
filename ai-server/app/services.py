@@ -43,7 +43,7 @@ class AIService:
     @tenacity.retry(
         stop=tenacity.stop_after_attempt(3),
         wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
-        retry=tenacity.retry_if_exception_type((anthropic.InternalServerError, anthropic.RateLimitError, anthropic.OverloadedError)),
+        retry=tenacity.retry_if_exception_type((anthropic.InternalServerError, anthropic.RateLimitError, anthropic.APIStatusError)),
         before_sleep=lambda retry_state: print(f"AI 서비스 일시적 지연(상태 코드: {retry_state.outcome.exception().status_code if hasattr(retry_state.outcome.exception(), 'status_code') else 'N/A'}). {retry_state.attempt_number}차 재시도 중..."),
         reraise=True
     )
