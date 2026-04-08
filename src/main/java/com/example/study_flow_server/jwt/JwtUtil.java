@@ -18,13 +18,13 @@ import java.time.Duration;
 @Component
 public class JwtUtil {
 
-    @Value("${jwt.secret.key}")
+    @Value("${jwt.secret.key:studyflowaitypesecrettestkey32charsplus}")
     private String secretKey;
 
-    @Value("${jwt.token.expiration}")
+    @Value("${jwt.token.expiration:3600000}")
     private long tokenTime;
 
-    @Value("${jwt.token.refresh-expiration}")
+    @Value("${jwt.token.refresh-expiration:604800000}")
     private long refreshTokenTime;
 
     public static final String AUTHORIZATION_HEADER = "Authorization";

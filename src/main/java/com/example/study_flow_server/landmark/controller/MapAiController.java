@@ -20,10 +20,10 @@ import java.util.Map;
 @RequestMapping("/api/v1/ai")
 public class MapAiController {
 
-    @Value("${groq.api.key}")
+    @Value("${groq.api.key:dummy}")
     private String groqApiKey;
 
-    @Value("${groq.api.url}")
+    @Value("${groq.api.url:https://api.groq.com/openai/v1/chat/completions}")
     private String groqUrl;
 
     @PostMapping("/recommend")

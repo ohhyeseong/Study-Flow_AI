@@ -23,7 +23,7 @@ public class EmailService {
     private static final String REDIS_AUTH_PREFIX = "AUTH:";
     private static final String REDIS_DONE_PREFIX = "DONE:";
 
-    @Value("${spring.mail.username}")
+    @Value("${spring.mail.username:dummy}")
     private String senderEmail;
 
     public void sendVerificationCode(String targetEmail) {
