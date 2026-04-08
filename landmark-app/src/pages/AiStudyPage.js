@@ -1,10 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const api = axios.create({
-    baseURL: 'http://54.180.155.22:8080/api/ai',
-    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-});
+import apiClient from '../api';
 
 function AIStudyPage() {
     const [file, setFile] = useState(null);
@@ -31,7 +26,7 @@ function AIStudyPage() {
         formData.append("prompt", prompt);
 
         try {
-            const response = await api.post('/analyze', formData, {
+            const response = await apiClient.post('/api/ai/analyze', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             alert("분석 완료!");

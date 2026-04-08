@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import axios from 'axios';
+import apiClient from '../api';
 import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -85,7 +85,7 @@ function MapPage() {
         setMarkers(newMarkers);
 
         try {
-          const response = await axios.post(`http://54.180.155.22:8080/api/v1/ai/recommend`, {
+          const response = await apiClient.post(`/api/v1/ai/recommend`, {
             places: placeDetails,
             userQuery: (customPrompt || keyword) + " 주변의 공부하기 좋은 장소나 쉼터를 추천해줘."
           });
@@ -103,7 +103,7 @@ function MapPage() {
 
   const fetchAndShowSavedLandmarks = async () => {
     try {
-      const response = await axios.get('http://54.180.155.22:8080/api/v1/landmarks');
+      const response = await apiClient.get('/api/v1/landmarks');
       setSavedLandmarks(response.data.data);
       setShowSaved(true);
     } catch (error) {
@@ -115,7 +115,7 @@ function MapPage() {
     const description = prompt(`${place.name}에 대한 메모:`, place.category || "");
     if (description === null) return;
     try {
-      await axios.post('http://54.180.155.22:8080/api/v1/landmarks/register', {
+      await apiClient.post('/api/v1/landmarks/register', {
         name: place.name,
         description: description,
         latitude: place.lat,
@@ -166,7 +166,7 @@ function MapPage() {
                     const moveLatLng = new window.kakao.maps.LatLng(place.latitude, place.longitude);
                     mapObj.panTo(moveLatLng);
                     setSelectedPlace({ ...place, type: 'saved' });
-                    if (window.innerWidth <= 768) setShowSaved(false); // 모바일에서는 목록 이동 후 닫기
+                    if (window.innerWidth <= 768) setShowSaved(false);
                   }}>
                     <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{place.name}</div>
                     <div style={{ fontSize: '12px', color: '#666' }}>{place.description}</div>
