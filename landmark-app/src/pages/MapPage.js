@@ -86,7 +86,7 @@ function MapPage() {
         setMarkers(newMarkers);
 
         try {
-          const response = await axios.post(`http://localhost:8090/api/v1/ai/recommend`, {
+          const response = await axios.post(`http://54.180.155.22:8080/api/v1/ai/recommend`, {
             places: placeDetails,
             userQuery: (customPrompt || keyword) + " 주변의 공부하기 좋은 장소나 쉼터를 추천해줘."
           });
@@ -104,7 +104,7 @@ function MapPage() {
 
   const fetchAndShowSavedLandmarks = async () => {
     try {
-      const response = await axios.get('http://localhost:8090/api/v1/landmarks');
+      const response = await axios.get('http://54.180.155.22:8080/api/v1/landmarks');
       setSavedLandmarks(response.data.data);
       setShowSaved(true);
     } catch (error) {
@@ -116,7 +116,7 @@ function MapPage() {
     const description = prompt(`${place.name}에 대한 메모:`, place.category || "");
     if (description === null) return;
     try {
-      await axios.post('http://localhost:8090/api/v1/landmarks/register', {
+      await axios.post('http://54.180.155.22:8080/api/v1/landmarks/register', {
         name: place.name,
         description: description,
         latitude: place.lat,

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'http://localhost:8090/api/ai',
+    baseURL: 'http://54.180.155.22:8080/api/ai',
     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
 });
 

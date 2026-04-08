@@ -34,7 +34,7 @@ const SignUpPage = () => {
             return;
         }
         try {
-            await apiClient.post(`http://localhost:8090/api/auth/email-verify?email=${email}&code=${verificationCode}`);
+            await apiClient.post(`/api/auth/email-verify?email=${email}&code=${verificationCode}`);
             alert("이메일 인증이 완료되었습니다!");
             setIsEmailVerified(true);
         } catch (error) {
@@ -55,7 +55,7 @@ const SignUpPage = () => {
 
         setIsLoading(true);
         try {
-            await apiClient.post('http://localhost:8090/api/auth/signup', {
+            await apiClient.post('/api/auth/signup', {
                 username,
                 password,
                 nickname,
