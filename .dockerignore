@@ -1,0 +1,11 @@
+certbot/
+.git/
+.github/
+.gradle/
+.idea/
+build/
+bin/
+out/
+.env
+**/node_modules/
+**/build/
