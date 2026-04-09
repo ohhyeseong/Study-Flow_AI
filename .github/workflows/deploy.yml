@@ -24,12 +24,13 @@ jobs:
           AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         with:
           command_timeout: 20m
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: MAIL_USERNAME,MAIL_PASSWORD,JWT_SECRET_KEY,AWS_ACCESS_KEY,AWS_SECRET_KEY,AWS_REGION,GROQ_API_KEY,AWS_BUCKET_NAME,ANTHROPIC_API_KEY
+          envs: MAIL_USERNAME,MAIL_PASSWORD,JWT_SECRET_KEY,AWS_ACCESS_KEY,AWS_SECRET_KEY,AWS_REGION,GROQ_API_KEY,AWS_BUCKET_NAME,ANTHROPIC_API_KEY,SENTRY_AUTH_TOKEN,SENTRY_DSN
           script: |
             cd ~/Study-Flow_AI
             git pull origin main
@@ -43,6 +44,8 @@ jobs:
             echo "GROQ_API_KEY=$GROQ_API_KEY" >> .env
             echo "AWS_BUCKET_NAME=$AWS_BUCKET_NAME" >> .env
             echo "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY" >> .env
+            echo "SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN" >> .env
+            echo "SENTRY_DSN=$SENTRY_DSN" >> .env
             
             docker-compose down
             docker-compose up -d --build
