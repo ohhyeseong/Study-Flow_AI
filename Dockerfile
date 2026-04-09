@@ -2,6 +2,8 @@
 FROM gradle:8-jdk21 AS build
 WORKDIR /app
 COPY . .
+ARG SENTRY_AUTH_TOKEN
+ENV SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
 RUN chmod +x gradlew
 RUN ./gradlew build -x test
 
