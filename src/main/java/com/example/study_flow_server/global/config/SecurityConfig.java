@@ -44,7 +44,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/auth/**", "/api/users/signup", "/api/v1/landmarks/**", "/ws/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/users/signup", "/api/v1/landmarks/**", "/ws/**", "/api/sentry-test").permitAll()
                         .requestMatchers("/api/ai/**", "/api/chat/**", "/api/v1/ai/**").authenticated()
                         .anyRequest().authenticated()
                 )
