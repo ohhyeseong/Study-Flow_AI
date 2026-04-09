@@ -105,15 +105,15 @@ const MainPage = () => {
                             </div>
                         </div>
                     </div>
+
+                    <footer style={styles.footer}>
+                        <p style={styles.footerText}>
+                            오류나 버그 발견 시 <a href="mailto:ohs020105@gmail.com" style={styles.footerLink}>ohs020105@gmail.com</a>으로 제보 부탁드립니다.
+                        </p>
+                        <p style={styles.copyright}>© 2026 Study-Flow AI. All rights reserved.</p>
+                    </footer>
                 </div>
             </div>
-
-            <footer style={styles.footer}>
-                <p style={styles.footerText}>
-                    오류나 버그 발견 시 <a href="mailto:ohs020105@gmail.com" style={styles.footerLink}>ohs020105@gmail.com</a>으로 제보 부탁드립니다.
-                </p>
-                <p style={styles.copyright}>© 2026 Study-Flow AI. All rights reserved.</p>
-            </footer>
 
             <style>{`
                 .menu-card-hover:hover {
