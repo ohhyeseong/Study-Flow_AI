@@ -2,7 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.5.10'
 	id 'io.spring.dependency-management' version '1.1.7'
-	id 'io.sentry.jvm.gradle' version '7.14.0'
+	id 'io.sentry.jvm.gradle' version '6.4.0'
 }
 
 group = 'com.example'
@@ -58,6 +58,9 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // Sentry (Spring Boot 3 / Jakarta)
+    implementation 'io.sentry:sentry-spring-boot-starter-jakarta:7.14.0'
 
 }
 
