@@ -108,6 +108,13 @@ const MainPage = () => {
                 </div>
             </div>
 
+            <footer style={styles.footer}>
+                <p style={styles.footerText}>
+                    오류나 버그 발견 시 <a href="mailto:ohs020105@gmail.com" style={styles.footerLink}>ohs020105@gmail.com</a>으로 제보 부탁드립니다.
+                </p>
+                <p style={styles.copyright}>© 2026 Study-Flow AI. All rights reserved.</p>
+            </footer>
+
             <style>{`
                 .menu-card-hover:hover {
                     transform: translateY(-5px);
@@ -182,7 +189,11 @@ const styles = {
     menuCard: { background: '#fff', padding: '32px', borderRadius: '24px', boxShadow: '0 8px 24px -10px rgba(0,0,0,0.05)', cursor: 'pointer', transition: 'all 0.3s ease', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', alignItems: 'center' },
     cardIcon: { fontSize: '40px', marginBottom: '20px', background: '#f8fafc', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '24px' },
     cardTitle: { margin: '0 0 10px 0', fontSize: '20px', color: '#1e293b', fontWeight: '700' },
-    cardDesc: { margin: 0, color: '#64748b', fontSize: '15px', lineHeight: '1.5' }
+    cardDesc: { margin: 0, color: '#64748b', fontSize: '15px', lineHeight: '1.5' },
+    footer: { padding: '40px 20px', backgroundColor: '#f1f5f9', borderTop: '1px solid #e2e8f0', textAlign: 'center', marginTop: 'auto' },
+    footerText: { margin: '0 0 8px 0', fontSize: '14px', color: '#64748b', fontWeight: '500' },
+    footerLink: { color: '#4f46e5', fontWeight: '700', textDecoration: 'none' },
+    copyright: { margin: 0, fontSize: '12px', color: '#94a3b8' }
 };
 
 export default MainPage;
