@@ -131,7 +131,7 @@ const ChatPage = () => {
 
     const connectStomp = () => {
         const token = localStorage.getItem('accessToken');
-        const socket = new SockJS('http://54.180.155.22:8080/ws');
+        const socket = new SockJS('/ws');
         stompClient.current = Stomp.over(socket);
         stompClient.current.debug = () => { };
 
