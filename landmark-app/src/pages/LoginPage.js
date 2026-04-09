@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import apiClient from '../api';
 
 const LoginPage = () => {
@@ -7,6 +7,9 @@ const LoginPage = () => {
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const from = location.state?.from || '/';
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -31,7 +34,8 @@ const LoginPage = () => {
                 localStorage.setItem('role', response.data.data.role);
 
                 alert("로그인에 성공했습니다!");
-                navigate('/');
+
+                navigate(from, { replace: true });
                 window.location.reload();
             } else {
                 alert("로그인 성공했으나 서버로부터 토큰을 받지 못했습니다.");

@@ -72,7 +72,7 @@ public class EmailService {
                 "📍 방 제목: " + roomTitle + "\n" +
                 "🔑 입장 코드: [" + roomCode + "]\n\n" +
                 "아래 링크를 클릭하여 Study-Flow에 접속한 뒤, 채팅 탭에서 원하시는 방을 클릭 후 코드를 입력해 참가하세요!\n" +
-                "👉 접속 링크: http://54.180.155.22/chat");
+                "👉 접속 링크: https://studyflowai.store/chat");
         mailSender.send(message);
     }
 

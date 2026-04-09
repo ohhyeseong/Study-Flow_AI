@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import apiClient from '../api';
 import Header from '../components/Header';
 import ReactMarkdown from 'react-markdown';
@@ -9,6 +9,17 @@ const PostDetailPage = () => {
     const { postId } = useParams();
     const navigate = useNavigate();
     const currentUsername = localStorage.getItem('username');
+    const location = useLocation();
+
+    const checkAuthAndRedirect = () => {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            alert("로그인이 필요한 서비스입니다.");
+            navigate('/login', { state: { from: location } });
+            return false;
+        }
+        return true;
+    };
 
     const [post, setPost] = useState(null);
     const [comments, setComments] = useState([]);
@@ -59,6 +70,7 @@ const PostDetailPage = () => {
     };
 
     const handleToggleLike = async () => {
+        if (!checkAuthAndRedirect()) return;
         try {
             const res = await apiClient.post(`/api/posts/${postId}/like`);
             const isNowLiked = res.data.data;
@@ -177,7 +189,13 @@ const PostDetailPage = () => {
                 <div style={styles.commentSection} className="post-detail-comments">
                     <h3 style={styles.commentCount}>💬 댓글 {comments.length}개</h3>
                     <form onSubmit={handleCommentSubmit} style={styles.commentForm}>
-                        <textarea value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글을 입력하세요" style={styles.commentInput} />
+                        <textarea 
+                            value={newComment} 
+                            onChange={e => setNewComment(e.target.value)} 
+                            onFocus={checkAuthAndRedirect}
+                            placeholder={localStorage.getItem('accessToken') ? "댓글을 입력하세요" : "로그인 후 댓글을 작성할 수 있습니다"} 
+                            style={styles.commentInput} 
+                        />
                         <button type="submit" style={styles.commentSubmitBtn}>등록</button>
                     </form>
 
@@ -215,7 +233,13 @@ const PostDetailPage = () => {
 
                                 {replyingTo === c.id && (
                                     <div style={styles.replyInputArea}>
-                                        <textarea value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="답글을 남겨보세요" style={styles.replyInput} />
+                                        <textarea 
+                                            value={replyText} 
+                                            onChange={e => setReplyText(e.target.value)} 
+                                            onFocus={checkAuthAndRedirect}
+                                            placeholder="답글을 남겨보세요" 
+                                            style={styles.replyInput} 
+                                        />
                                         <div style={styles.btnGroup}>
                                             <button onClick={() => handleReplySubmit(c.id)} style={styles.saveBtn}>답글등록</button>
                                             <button onClick={() => setReplyingTo(null)} style={styles.cancelBtn}>취소</button>
